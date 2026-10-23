@@ -9366,6 +9366,7 @@ routines = new RoutineManager({
     return source.threadId;
   },
   createGoalTask: (groupId, title) => store.createGroupTask(groupId, title, false),
+  goalTaskExists: (groupId, threadId) => Boolean(store.groupTaskByThread(groupId, threadId)),
   isResultsThread: (botId, threadId) => {
     const bot = store.bot(botId);
     const task = store.taskByThread(botId, threadId);

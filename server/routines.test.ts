@@ -2257,7 +2257,7 @@ describe("RoutineManager", () => {
     h.setGoal("ready");
     await h.manager.tick();
     const run = h.manager.listRuns()[0]!;
-    expect(h.goalTasks).toEqual([{ groupId: "room-1", title: "Team launch · Aug 17, 8:01 AM" }]);
+    expect(h.goalTasks).toEqual([{ groupId: "room-1", title: "Team launch" }]);
     expect(h.startedGoals[0]).toMatchObject({
       groupId: "room-1",
       threadId: "goal-thread-1",
@@ -3845,5 +3845,55 @@ describe("runs that report into a chat", () => {
     routineTurn = true;
     h.manager.handleRuntimeEvent(event("thread-1", "turn.started"));
     expect(h.manager.handleRuntimeEvent(event("thread-1", "turn.completed"))).toMatchObject({ id: run.id, status: "completed" });
+  });
+});
+
+describe("room goal conversations", () => {
+  const roomGoal = {
+    name: "Monitor printers",
+    prompt: "Check the ticket queue",
+    target: "room-goal" as const,
+    botId: "chief-1",
+    groupId: "room-1",
+    schedule: { type: "daily" as const, time: "09:00", weekdays: [1] },
+  };
+
+  it("runs every execution of one routine in the same room conversation", async () => {
+    const h = harness();
+    h.options.goalTaskExists = () => true;
+    const routine = h.manager.create(roomGoal);
+    const first = h.manager.runNow(routine.id)!;
+    await h.manager.tick();
+    h.manager.finishGoalRun(first.id, "completed", "Nothing new.");
+    h.manager.runNow(routine.id);
+    await h.manager.tick();
+
+    expect(h.goalTasks).toEqual([{ groupId: "room-1", title: "Monitor printers" }]);
+    expect(h.startedGoals.map((goal) => goal.threadId)).toEqual(["goal-thread-1", "goal-thread-1"]);
+  });
+
+  it("opens a new conversation when the previous one was deleted", async () => {
+    const h = harness();
+    h.options.goalTaskExists = () => false;
+    const routine = h.manager.create(roomGoal);
+    const first = h.manager.runNow(routine.id)!;
+    await h.manager.tick();
+    h.manager.finishGoalRun(first.id, "completed", "Nothing new.");
+    h.manager.runNow(routine.id);
+    await h.manager.tick();
+
+    expect(h.startedGoals.map((goal) => goal.threadId)).toEqual(["goal-thread-1", "goal-thread-2"]);
+  });
+
+  it("never joins a conversation another run of it is still using", async () => {
+    const h = harness();
+    h.options.goalTaskExists = () => true;
+    const routine = h.manager.create(roomGoal);
+    h.manager.runNow(routine.id);
+    await h.manager.tick();
+    h.manager.runNow(routine.id);
+    await h.manager.tick();
+
+    expect(new Set(h.manager.listRuns().map((run) => run.threadId)).size).toBe(h.manager.listRuns().length);
   });
 });
