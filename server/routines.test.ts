@@ -3926,3 +3926,62 @@ describe("room goal conversations", () => {
     expect(new Set(h.manager.listRuns().map((run) => run.threadId)).size).toBe(h.manager.listRuns().length);
   });
 });
+
+describe("watched routines", () => {
+  const start = Date.parse("2026-09-13T08:00:00Z");
+  const watchedHarness = (fingerprint: () => Promise<string | null>) => {
+    const h = harness(start);
+    const routine = h.manager.create({ name: "Ticket check", prompt: "Check tickets", botId: "maus-1",
+      schedule: { type: "interval", everyMinutes: 5, anchorAt: start } });
+    const disk = JSON.parse(readFileSync(h.options.file!, "utf8"));
+    disk.routines[0].watch = { kind: "tomticket", query: "customer_type_id=E&customer_id=a@b.c" };
+    writeFileSync(h.options.file!, JSON.stringify(disk));
+    const manager = new RoutineManager({ ...h.options, watchFingerprint: fingerprint });
+    const due = async () => {
+      h.setNow(manager.listRoutines()[0].nextRunAt!);
+      await manager.tick();
+    };
+    const finishLast = () => {
+      const run = manager.listRuns().find((candidate) => candidate.status === "running")!;
+      manager.handleRuntimeEvent({ eventId: `done-${run.id}`, provider: "fake", threadId: run.threadId!, createdAt: new Date().toISOString(), type: "turn.completed", ok: true });
+    };
+    return { h, manager, routine, due, finishLast };
+  };
+
+  it("starts a run only when what the watch sees changed", async () => {
+    let seen = "ticket-1|2|10:00";
+    const w = watchedHarness(async () => seen);
+    await w.due();
+    w.finishLast();
+    await w.due();
+    expect(w.h.started).toHaveLength(1);
+    seen = "ticket-1|3|10:07";
+    await w.due();
+    expect(w.h.started).toHaveLength(2);
+  });
+
+  it("keeps the watch across a restart", async () => {
+    const w = watchedHarness(async () => "same");
+    await w.due();
+    expect(new RoutineManager(w.h.options).listRoutines()[0]).toMatchObject({ watch: { kind: "tomticket" }, watchFingerprint: "same" });
+  });
+
+  it("runs again after a failed run, even when nothing changed", async () => {
+    const w = watchedHarness(async () => "same");
+    await w.due();
+    const run = w.manager.listRuns()[0]!;
+    w.manager.handleRuntimeEvent({ eventId: "fail", provider: "fake", threadId: run.threadId!, createdAt: new Date().toISOString(), type: "turn.completed", ok: false });
+    await w.due();
+    expect(w.h.started).toHaveLength(2);
+  });
+
+  it("runs as usual when the watch cannot read its source", async () => {
+    const w = watchedHarness(async () => { throw new Error("HTTP 503"); });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await w.due();
+    w.finishLast();
+    await w.due();
+    warn.mockRestore();
+    expect(w.h.started).toHaveLength(2);
+  });
+});

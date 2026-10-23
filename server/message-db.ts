@@ -215,7 +215,7 @@ export interface FollowupPayload {
   unattended?: boolean;
   peerAsk?: Message["peerAsk"];
   mode?: "chat" | "goal";
-  via?: "api" | "call";
+  via?: "api" | "call" | "routine";
   callId?: string;
   fromApp?: Message["fromApp"];
   sender?: ResolvedSender;

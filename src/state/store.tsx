@@ -146,7 +146,7 @@ export interface Message extends Pick<import("../../shared/wire").WireMessage, "
   channelMode?: "chat" | "goal";
   tool?: { name: string; ok?: boolean; spoken?: string; setup?: boolean; claudeUpdate?: boolean; place?: PlaceRow; limitResetsAt?: number; summary?: string; input?: string; output?: string ; itemId?: string; outputPath?: string; fullResult?: boolean };
   steered?: boolean;
-  via?: "api" | "call";
+  via?: "api" | "call" | "routine";
   callId?: string;
   requestMessageId?: string;
   turnId?: string;

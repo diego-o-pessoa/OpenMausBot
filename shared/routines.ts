@@ -96,6 +96,13 @@ export function isRoutineProblemRun(run: { status: RoutineRunStatus }): boolean 
  * indicators count, or one exact status. */
 export type RoutineRunStatusFilter = "all" | "problems" | RoutineRunStatus;
 
+/** A model-free check before each scheduled occurrence; the run starts only when what it sees changed. */
+export interface RoutineWatch {
+  kind: "tomticket";
+  /** Extra TomTicket ticket/list filters, e.g. "customer_type_id=E&customer_id=person@example.com". */
+  query?: string;
+}
+
 export interface Routine {
   id: string;
   name: string;
@@ -124,6 +131,9 @@ export interface Routine {
   attachments?: RoutineContextAttachment[];
   sourceThreadId?: string;
   resultsThreadId?: string;
+  watch?: RoutineWatch;
+  /** What the watch saw when it last started a run. */
+  watchFingerprint?: string;
   nextRunAt: number | null;
   createdAt: number;
   updatedAt: number;

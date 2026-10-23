@@ -3543,6 +3543,7 @@
   "room.openBot": "Abrir {name}",
   "room.pinHint": "Fixar esta mensagem no topo do grupo",
   "room.fallbackBot": "Bot",
+  "room.routineRun": "Rotina executada",
   "room.aBot": "Um bot",
   "room.memberWorkingElsewhere": "{name} está trabalhando em outra conversa",
   "room.queue.waitingFor": "Na fila · aguardando {name} ({position} de {of})",

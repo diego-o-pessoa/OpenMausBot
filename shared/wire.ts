@@ -490,8 +490,8 @@ export interface WireMessage {
    * enveloped exactly as injected. */
   aside?: boolean;
   /** A user-role message that arrived through the server's HTTP API
-   * ("api"), or a request a person spoke on a Live call ("call"). */
-  via?: "api" | "call";
+   * ("api"), a request a person spoke on a Live call ("call"), or a team-goal routine's brief ("routine"). */
+  via?: "api" | "call" | "routine";
   /** The Live call a "call" line was spoken on (LiveCallState.callId). Set
    * only on user messages with `via: "call"`; a turn's own messages point
    * at their request through `requestMessageId` instead. */

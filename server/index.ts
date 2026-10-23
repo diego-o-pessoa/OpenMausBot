@@ -426,6 +426,7 @@ import { addHeldSecretScrubber, redactSecretsInText } from "./redact.ts";
 import * as vps from "./vps-computer.ts";
 import { vpsConfigForBot, vpsSshAliasForBot } from "./vps-hosts.ts";
 import { ROUTINE_RESTARTED, RoutineManager, type RoutineRun, type RoutineRunOn, type RoutineRunTrigger } from "./routines.ts";
+import { routineWatchChecker } from "./routine-watch.ts";
 import { CalendarCallManager, type CalendarCall } from "./calendar-calls.ts";
 import { BROWSER_CONTROL_REFUSAL, BROWSER_UPLOAD_TOOL, browserRuntimeEnv } from "./browser-runtime.ts";
 import { uploadableFiles } from "./browser-upload.ts";
@@ -9373,6 +9374,7 @@ routines = new RoutineManager({
   },
   createGoalTask: (groupId, title) => store.createGroupTask(groupId, title, false),
   goalTaskExists: (groupId, threadId) => Boolean(store.groupTaskByThread(groupId, threadId)),
+  watchFingerprint: routineWatchChecker(process.env),
   roomMainThread: (groupId) => {
     const tasks = store.group(groupId)?.tasks ?? [];
     return tasks.reduce<(typeof tasks)[number] | undefined>((first, task) => (!first || task.createdAt < first.createdAt ? task : first), undefined)?.threadId ?? null;
@@ -9400,6 +9402,7 @@ routines = new RoutineManager({
       threadId,
       goalCoordinatorBotId: coordinatorBotId,
       goalRunId: runId,
+      via: "routine",
     });
   },
   interruptTurn: async (botId, threadId) => {
@@ -11538,7 +11541,7 @@ type StartGroupTurnOptions = {
   threadId?: string;
   goalCoordinatorBotId?: string;
   goalRunId?: string;
-  via?: "api";
+  via?: "api" | "routine";
   sender?: ResolvedSender;
   trigger?: UsageTrigger;
   queuedGroup?: ChannelQueueItem[];

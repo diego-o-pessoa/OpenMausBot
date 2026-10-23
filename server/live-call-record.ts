@@ -5,7 +5,7 @@ import type { LiveCallRecord } from "../shared/wire.ts";
 import type { Message } from "./store.ts";
 
 export function spokenLineFields(
-  via: "api" | "call" | undefined,
+  via: "api" | "call" | "routine" | undefined,
   callId: string | undefined,
 ): { via?: "call"; callId?: string } {
   if (via !== "call") return {};

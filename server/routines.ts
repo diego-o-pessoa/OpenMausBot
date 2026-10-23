@@ -15,6 +15,7 @@ import { cleanSchedule, cloneSchedule, limitResetOccurrence, loadSchedule, merge
 import { runsOnce } from "../shared/limit-reset.ts";
 import {
   isRoutineProblemRun, type RoutineContextAttachment, type RoutineIntervalWindow, type RoutineRetryCause, type RoutineRunReport, type RoutineRunStatus, type RoutineRunTrigger,
+  type RoutineWatch,
 } from "../shared/routines.ts";
 import { ROUTINE_PARTS, type PartPair, type RoutinePart } from "./package-parts.ts";
 import {
@@ -65,6 +66,9 @@ export interface Routine {
   sourceThreadId?: string;
   resultsThreadId?: string;
   installedPackage?: RoutinePackageStamp;
+  watch?: RoutineWatch;
+  /** What the watch saw when it last started a run. */
+  watchFingerprint?: string;
   nextRunAt: number | null;
   createdAt: number;
   updatedAt: number;
@@ -212,6 +216,8 @@ export interface RoutineManagerOptions {
   goalTaskExists?: (groupId: string, threadId: string) => boolean;
   /** The room's first conversation, where its team goals run. */
   roomMainThread?: (groupId: string) => string | null;
+  /** Null when the watch cannot run here; throws when it could not read its source. */
+  watchFingerprint?: (watch: RoutineWatch) => Promise<string | null>;
   isResultsThread?: (botId: string, threadId: string) => boolean;
   resolveResultsThread?: (routine: Routine, forceNew: boolean) => { threadId: string; main?: true } | undefined;
   eventResultsThread?: (event: { webhookId: string; webhookName: string; botId: string }) => string | undefined;
@@ -1118,6 +1124,9 @@ export class RoutineManager {
         const stale = this.runs.filter((run) => run.routineId === routine.id && supersededBy(routine.nextRunAt!, run, this.options.handedOffWorkLive));
         for (const run of stale) await this.cancelRun(run.id, ROUTINE_SUPERSEDED);
       }
+      const watched = this.options.watchFingerprint && dueRoutines.some((routine) => routine.watch)
+        ? await this.readWatches(dueRoutines, now)
+        : new Map<string, string>();
       const scheduledRuns: RoutineRun[] = [];
       const allocations: ResultsThreadAllocation[] = [];
       if (dueRoutines.length > 0) {
@@ -1128,6 +1137,11 @@ export class RoutineManager {
             const scheduledFor = routine.schedule.type === "interval" && late <= CATCH_UP_MS
               ? latestIntervalOccurrence(routine.schedule, now) ?? pendingAt
               : pendingAt;
+            const seen = watched.get(routine.id);
+            if (seen !== undefined && seen === routine.watchFingerprint) {
+              this.advancePastOccurrence(routine, now, scheduledFor);
+              continue;
+            }
             const overlapping = !runsOnce(routine.schedule) && this.runs.some(
               (run) => run.routineId === routine.id && ["queued", "running", "waiting"].includes(run.status),
             );
@@ -1140,6 +1154,8 @@ export class RoutineManager {
                 run.status = "missed";
                 run.finishedAt = now;
                 run.error = "This computer was offline for more than 12 hours after the scheduled time";
+              } else if (seen !== undefined) {
+                routine.watchFingerprint = seen;
               }
               scheduledRuns.push(run);
             } else {
@@ -1403,6 +1419,9 @@ export class RoutineManager {
     run.attention = undefined;
     run.error = redactSecretsInText(message).slice(0, 500);
     run.finishedAt = this.now();
+    // A failed run did not act on what its watch saw, so the next occurrence must run again.
+    const watched = this.routines.find((routine) => routine.id === run.routineId && routine.watch);
+    if (watched) delete watched.watchFingerprint;
     this.save();
     this.emitRun(run);
     this.options.onRunFailed?.(cloneRun(run), alert === undefined && failsLikeLastOutcome(this.runs, run) ? null : alert);
@@ -1434,6 +1453,23 @@ export class RoutineManager {
     return target === "room-goal"
       ? "The assigned room or coordinator no longer exists"
       : "The assigned bot no longer exists";
+  }
+
+  /** What each due, watched routine's watch sees now. A routine is absent when its watch could not decide. */
+  private async readWatches(due: readonly Routine[], now: number): Promise<Map<string, string>> {
+    const seen = new Map<string, string>();
+    const check = this.options.watchFingerprint;
+    if (!check) return seen;
+    for (const routine of due) {
+      if (!routine.watch || now - routine.nextRunAt! > CATCH_UP_MS) continue;
+      try {
+        const fingerprint = await check(routine.watch);
+        if (fingerprint !== null) seen.set(routine.id, fingerprint);
+      } catch (error) {
+        console.warn(`routines: watch for ${routine.id} could not read its source; running anyway: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    return seen;
   }
 
   /** A room goal runs in the room's first conversation, else the routine's latest one; never one another run still uses. */

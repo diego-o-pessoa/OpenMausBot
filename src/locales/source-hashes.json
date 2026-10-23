@@ -22467,7 +22467,8 @@
       "cloudWelcome.files.foldersHome": "e6a5f807fc4d4961aa7bb651c24a81b63fe82ff124b9810ef1bb2fde9b277ed6",
       "cloudWelcome.files.foldersHomeAction": "3f940108cb1ecd9c0090da0b51b45f9fe673f00b22c7ffe3d013319b97456674",
       "cloudAccount.onCloudHome": "73fa1cad078e96f21e1f76917e66871f3e95e869eb631324e15d2bafad362e6b",
-      "cloudAccount.onCloudNoneHome": "b318ea0bc5e7459e8965d8e9ec83eaccba9281ebe40bf545c09a816ca25d850b"
+      "cloudAccount.onCloudNoneHome": "b318ea0bc5e7459e8965d8e9ec83eaccba9281ebe40bf545c09a816ca25d850b",
+      "room.routineRun": "3ea088be0439cf729162d7ef522bbef01a3aaef34dcc6d0e29da20dbb39ce8c9"
     },
     "zh": {
       "highlevel.unavailable": "87b8ac7f7610e6dd69f520bc59058fd92f307b9f4bcf804075f25d08bcaa7533",

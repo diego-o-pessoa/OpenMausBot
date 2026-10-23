@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { activeLocale, t } from "@/lib/i18n";
 import { useShowThreads } from "@/lib/thread-preferences";
-import { Check, ChevronDown, ChevronRight, Folder, FolderOpen, Loader2, Pause, Pin, Plus, Search, Square, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Clock, Folder, FolderOpen, Loader2, Pause, Pin, Plus, Search, Square, X } from "lucide-react";
 import {
   api,
   useStore,
@@ -147,6 +147,26 @@ export function RoomToolChip({ message, roomId }: { message: Message; roomId?: s
 
 const USER_COLLAPSE_CHARS = 600;
 const USER_COLLAPSE_LINES = 8;
+
+/** A team-goal routine's brief, folded to one line: it repeats on every run. */
+function RoutineRunLine({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="my-1 flex flex-col items-center" data-routine-run="">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11.5px] text-ink-secondary hover:bg-raised hover:text-ink"
+      >
+        <Clock size={12} aria-hidden="true" />
+        {t("room.routineRun")}
+        <ChevronDown size={12} aria-hidden="true" className={cn("transition-transform", open && "rotate-180")} />
+      </button>
+      {open && <div className="mt-1 max-w-[560px] whitespace-pre-wrap rounded-xl bg-raised px-3 py-2 text-[12.5px] text-ink-secondary">{text}</div>}
+    </div>
+  );
+}
 
 function RoomTextMessage({
   group,
@@ -465,7 +485,9 @@ export const Transcript = memo(function Transcript({
             <CompactionChip message={m} />
           ) : m.kind === "digest" ? (
             showToolCalls ? <DigestChip message={m} /> : null
-          ) : m.publishedPage ? <PublishedPageCard message={m} /> : m.kind === "text" && (m.text || m.attachments?.length) ? (
+          ) : m.publishedPage ? <PublishedPageCard message={m} /> : m.kind === "text" && m.via === "routine" ? (
+            <RoutineRunLine text={m.text ?? ""} />
+          ) : m.kind === "text" && (m.text || m.attachments?.length) ? (
             !user && isPureLeakedSystemHarnessMessage(m.text) && !m.attachments?.length ? null : (
               <RoomTextMessage
                 group={group}

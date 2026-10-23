@@ -3724,6 +3724,7 @@
   "room.openBot": "Open {name}",
   "room.pinHint": "Pin this message to the top of the group thread",
   "room.fallbackBot": "Bot",
+  "room.routineRun": "Routine ran",
   "room.aBot": "A bot",
   "room.memberWorkingElsewhere": "{name} is working in another thread",
   "room.queue.waitingFor": "Queued · waiting for {name} ({position} of {of})",
