@@ -15,6 +15,7 @@ import {
   reachablePeers,
   renderRoster,
   resolveTeammate,
+  roomMentionRule,
   roomPeerRosterSystemPrompt,
   roomRosterLine,
   teammateAvailabilityPrompt,
@@ -522,5 +523,23 @@ describe("live peer roster for coordination briefs", () => {
     expect(block).toContain("[LIVE TEAMMATES]");
     expect(block).toContain("1 teammate is unavailable right now");
     expect(block).not.toContain("Ghost");
+  });
+});
+
+describe("roomMentionRule", () => {
+  it("invites an @mention only when the server will start that teammate's turn", () => {
+    expect(roomMentionRule({ mentionsStartTurns: true, canCoordinate: true })).toContain("mention them like @Name");
+  });
+
+  it("sends delegated or last-hop turns to coordinate_bots instead of a mention that reaches nobody", () => {
+    const rule = roomMentionRule({ mentionsStartTurns: false, canCoordinate: true });
+    expect(rule).toContain("reaches nobody");
+    expect(rule).toContain("coordinate_bots");
+    expect(rule).toContain("Never end your turn waiting");
+    expect(rule).not.toContain("they'll see the conversation and respond");
+  });
+
+  it("does not name a tool the bot lacks", () => {
+    expect(roomMentionRule({ mentionsStartTurns: false, canCoordinate: false })).not.toContain("coordinate_bots");
   });
 });
