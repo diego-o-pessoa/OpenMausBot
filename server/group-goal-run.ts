@@ -150,3 +150,22 @@ export function groupGoalWorkerInstructions(args: {
 export function groupGoalAssignmentKey(memberId: string, instruction: string): string {
   return `${memberId}:${instruction.trim().toLocaleLowerCase().replace(/\s+/g, " ")}`;
 }
+
+export interface RoomWorkMember {
+  threadId: string;
+  busy?: boolean;
+  tasks?: ReadonlyArray<{ threadId: string; busy?: boolean }>;
+}
+
+/** A room-goal routine waits while the room or any member is still working, including hand-offs it awaits. */
+export function roomHasActiveWork(args: {
+  roomTurnRunning: boolean;
+  members: readonly RoomWorkMember[];
+  awaitingTeammates: ReadonlySet<string>;
+}): boolean {
+  if (args.roomTurnRunning) return true;
+  return args.members.some((member) =>
+    Boolean(member.busy)
+    || args.awaitingTeammates.has(member.threadId)
+    || (member.tasks ?? []).some((task) => task.busy || args.awaitingTeammates.has(task.threadId)));
+}

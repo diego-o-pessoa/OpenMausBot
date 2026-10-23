@@ -8,6 +8,7 @@ import {
   groupGoalCoordinatorInstructions,
   parseGroupGoalDecision,
   resolveGroupGoalMember,
+  roomHasActiveWork,
   selectGroupGoalCoordinator,
 } from "./group-goal-run.ts";
 
@@ -110,5 +111,27 @@ describe("groupGoalCoordinatorInstructions harness note", () => {
 
   it("omits the note line entirely when there is nothing to report", () => {
     expect(groupGoalCoordinatorInstructions(base)).not.toContain("Harness note:");
+  });
+});
+
+describe("roomHasActiveWork", () => {
+  const idle = { threadId: "main-a", tasks: [{ threadId: "task-a" }] };
+  const none = new Set<string>();
+
+  it("lets a room-goal routine run when the room and every member are idle", () => {
+    expect(roomHasActiveWork({ roomTurnRunning: false, members: [idle], awaitingTeammates: none })).toBe(false);
+  });
+
+  it("waits while a member works a ticket in its own conversation", () => {
+    const working = { threadId: "main-b", tasks: [{ threadId: "task-b", busy: true }] };
+    expect(roomHasActiveWork({ roomTurnRunning: false, members: [idle, working], awaitingTeammates: none })).toBe(true);
+  });
+
+  it("waits while a member awaits teammates it handed work to", () => {
+    expect(roomHasActiveWork({ roomTurnRunning: false, members: [idle], awaitingTeammates: new Set(["task-a"]) })).toBe(true);
+  });
+
+  it("waits while the room itself has a turn running", () => {
+    expect(roomHasActiveWork({ roomTurnRunning: true, members: [], awaitingTeammates: none })).toBe(true);
   });
 });

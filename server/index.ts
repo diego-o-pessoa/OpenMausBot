@@ -229,6 +229,7 @@ import {
   groupGoalWorkerInstructions,
   parseGroupGoalDecision,
   resolveGroupGoalMember,
+  roomHasActiveWork,
   selectGroupGoalCoordinator,
   type GoalRunMember,
 } from "./group-goal-run.ts";
@@ -9348,7 +9349,12 @@ routines = new RoutineManager({
     ) {
       return "missing";
     }
-    return groupIsWorking(group) || coordinator.busy ? "busy" : "ready";
+    const members = group.memberIds.map((id) => store.bot(id)).filter((member): member is NonNullable<typeof member> => Boolean(member));
+    return roomHasActiveWork({
+      roomTurnRunning: groupIsWorking(group) || Boolean(coordinator.busy),
+      members,
+      awaitingTeammates: threadsAwaitingTeammates(),
+    }) ? "busy" : "ready";
   },
   createTask: (botId, title, run) => {
     const task = store.createTask(botId, title, false);
