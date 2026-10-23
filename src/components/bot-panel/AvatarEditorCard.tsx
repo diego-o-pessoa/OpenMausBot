@@ -4,9 +4,9 @@ import { ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import type { LocaleKey } from "@/locales";
-import { MAUS_COLORS, MAUS_COLOR_NAMES, type MausState } from "@/lib/mascot";
+import { GROK_BODY_IDS, MAUS_COLORS, MAUS_COLOR_NAMES, grokBody, type MausState } from "@/lib/mascot";
 import type { Bot } from "@/state/store";
-import { MASCOT_BODIES, MASCOT_BODY_IDS } from "../../../shared/mascot-bodies";
+import { MASCOT_BODIES } from "../../../shared/mascot-bodies";
 import { HALLOWEEN_BODIES, HALLOWEEN_BODY_IDS } from "../../../shared/halloween-bodies";
 import { botBodyId, isHalloweenBody, type BotBodyId } from "../../../shared/bot-body";
 import { useHalloweenDressed, wornBody } from "@/lib/halloween-dress";
@@ -46,7 +46,8 @@ export function AvatarEditorCard({ bot, onPatch, onClose }: {
     tabsRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
   }, []);
   const pickMascot = (patch: AvatarPatch) => onPatch(crop === "mascot" ? patch : { ...patch, avatarCrop: "mascot" });
-  const body = botBodyId(bot.mascotBody);
+  const saved = botBodyId(bot.mascotBody);
+  const body = isHalloweenBody(saved) ? saved : grokBody(saved);
   const costume = wornBody(bot.mascotBody, bot.color, useHalloweenDressed());
   const dressedAs = costume !== body && isHalloweenBody(costume) ? HALLOWEEN_BODIES[costume].name : null;
   const bodyButton = (id: BotBodyId, name: string) => (
@@ -114,7 +115,7 @@ export function AvatarEditorCard({ bot, onPatch, onClose }: {
         {tab === "bot" && (
           <>
             <div className="grid grid-cols-5 gap-1.5">
-              {MASCOT_BODY_IDS.map((id) => bodyButton(id, MASCOT_BODIES[id].name))}
+              {GROK_BODY_IDS.map((id) => bodyButton(id, MASCOT_BODIES[id].name))}
             </div>
             <div className="flex flex-wrap items-baseline gap-x-2 px-1 pb-1.5 pt-3 text-[12px] text-ink-tertiary">
               <span>{t("botPanel.avatar.halloween")}</span>

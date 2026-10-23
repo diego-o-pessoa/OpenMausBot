@@ -158,6 +158,26 @@ Mais recente primeiro. Modelo de entrada:
 - **Como verificar:** comando ou passo usado.
 ```
 
+### 2026-10-22 — Mascote refeito a partir de medições do vídeo do Grok Bot
+- **O quê:** os olhos do Grok foram medidos quadro a quadro no vídeo (10 vezes por segundo: posição,
+  comprimento, largura e inclinação de cada olho, tamanho e esticão do corpo) e o mascote agora reproduz
+  essas trajetórias:
+  - **trabalhando:** repete os 18 s do Grok (olha para baixo à esquerda, varre para cima e para a direita,
+    olhos grandes, some "atrás" da bola e volta), em loop;
+  - **concluído:** os 10 s do Grok (sorriso "^^" com pulinhos, olhar de frente, volta à pose parada);
+  - **clique:** o corpo encolhe para ~75% com os olhos rolando para o alto à esquerda e volta pela direita;
+  - **mouse em cima:** olhos em bolinha que seguem o cursor;
+  - **parado:** pose medida do Grok (olhos mais grossos que antes).
+  - Formatos que o Grok não tem (cursor, blob, estrela etc.) agora são desenhados como **círculo**; o seletor
+    mostra só círculo, almofada e feijão. (O Cocoa estava salvo como "blob", por isso parecia oval.)
+  - Tamanhos dos olhos conferidos medindo o nosso mascote com o mesmo método: diferença ≤ 2%.
+- **Por quê:** o primeiro mascote não ficou parecido o bastante (olhos, animações, mouse).
+- **Onde:** `src/components/mascot-tracks.ts` (dados medidos), `src/components/sphere-mascot.ts` (rostos,
+  interpolação, olhar para o mouse), `src/components/SphereMascot.tsx`, `src/lib/mascot.ts` (`GROK_BODY_IDS`,
+  `grokBody`), editores de avatar e testes.
+- **Como verificar:** `npx vite --port 5199` e abrir `/mascot-preview.html?faces` (rostos fixos),
+  `?solo=working`, `?solo=done`, `?solo=press` ou a galeria.
+
 ### 2026-10-22 — Mascote igual ao do Grok Bot
 - **O quê:** o mascote foi refeito para se comportar como o do Grok Bot (análise dos vídeos em `videos/`).
   - Visual: cor sólida (sem gradiente), só dois olhos brancos em pílula, sem boca. Os olhos ficam numa

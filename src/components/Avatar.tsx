@@ -1,10 +1,10 @@
 import { forwardRef, memo, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { MAUS_COLORS, type MausColor, type MausMotion, type MausState } from "@/lib/mascot";
+import { MAUS_COLORS, grokBody, type MausColor, type MausMotion, type MausState } from "@/lib/mascot";
 import type { CursorAvatarHandle } from "./CursorAvatar";
 import { SphereMascot, type SphereMascotHandle } from "./SphereMascot";
 import { moodForState } from "./sphere-mascot";
 import { avatarCropRadius, botAvatarProfile, clampAvatarFocus, clampAvatarZoom, type BotAvatarCrop } from "../../shared/bot-avatar";
-import { MASCOT_BODIES, botMascotBody } from "../../shared/mascot-bodies";
+import { MASCOT_BODIES } from "../../shared/mascot-bodies";
 import { isHalloweenBody, type BotBodyId } from "../../shared/bot-body";
 import { useHalloweenDressed, wornBody } from "@/lib/halloween-dress";
 import { CarvedAvatar } from "./CarvedAvatar";
@@ -89,7 +89,7 @@ function FlatAvatarComponent(
   }: MausAvatarProps,
   ref: React.Ref<MausAvatarHandle>,
 ) {
-  const silhouette = MASCOT_BODIES[botMascotBody(bodyId)];
+  const silhouette = MASCOT_BODIES[grokBody(bodyId)];
   const inner = useRef<SphereMascotHandle>(null);
   useImperativeHandle(ref, () => ({
     blink: () => inner.current?.blink(),

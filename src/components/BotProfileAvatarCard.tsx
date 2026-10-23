@@ -3,15 +3,17 @@ import { ImagePlus, Loader2, Trash2 } from "lucide-react";
 import type { Bot } from "@/state/store";
 import { cn } from "@/lib/cn";
 import {
+  GROK_BODY_IDS,
+  grokBody,
   MAUS_COLORS,
   MAUS_COLOR_NAMES,
   type MausMotion,
   type MausState,
 } from "@/lib/mascot";
 import { BOT_AVATAR_CROPS } from "../../shared/bot-avatar";
-import { MASCOT_BODIES, MASCOT_BODY_IDS } from "../../shared/mascot-bodies";
+import { MASCOT_BODIES } from "../../shared/mascot-bodies";
 import { HALLOWEEN_BODIES, HALLOWEEN_BODY_IDS } from "../../shared/halloween-bodies";
-import { botBodyId, type BotBodyId } from "../../shared/bot-body";
+import { botBodyId, isHalloweenBody, type BotBodyId } from "../../shared/bot-body";
 import { BotAvatar, MausAvatar } from "./Avatar";
 import { AvatarImageGenerator } from "./AvatarImageGenerator";
 import { AvatarFraming, OrganizationAvatarIcons, RESET_MASCOT_PATCH, useAvatarImage, type AvatarPatch } from "./avatar-editing";
@@ -141,7 +143,7 @@ export function BotProfileAvatarCard({
               {t("botIdentity.body")}
             </div>
             <div className="grid grid-cols-5 gap-1.5">
-              {MASCOT_BODY_IDS.map((id) => (
+              {GROK_BODY_IDS.map((id) => (
                 <BodyButton key={id} id={id} name={MASCOT_BODIES[id].name} bot={bot} busy={busy} onPatch={onPatch} />
               ))}
             </div>
@@ -177,7 +179,8 @@ function BodyButton({ id, name, bot, busy, onPatch }: {
   busy: boolean;
   onPatch: (patch: AvatarPatch) => void;
 }) {
-  const selected = botBodyId(bot.mascotBody) === id;
+  const saved = botBodyId(bot.mascotBody);
+  const selected = (isHalloweenBody(saved) ? saved : grokBody(saved)) === id;
   return (
     <button
       type="button"

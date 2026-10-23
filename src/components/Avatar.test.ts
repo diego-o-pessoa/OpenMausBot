@@ -24,9 +24,13 @@ describe("MausAvatar body", () => {
     expect(render({})).toContain(MASCOT_BODIES.circle.clip);
   });
 
-  it("wears the body it is given", () => {
-    const markup = render({ bodyId: "star" });
-    expect(markup).toContain(MASCOT_BODIES.star.fit);
+  it("wears the Grok body it is given", () => {
+    const markup = render({ bodyId: "pillow" });
+    expect(markup).toContain(MASCOT_BODIES.pillow.clip);
+  });
+
+  it("draws a body Grok does not have as a circle", () => {
+    expect(render({ bodyId: "star" })).toContain(MASCOT_BODIES.circle.clip);
   });
 
   it("falls back to the circle for an unknown body", () => {

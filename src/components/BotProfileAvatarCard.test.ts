@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { StoreProvider, type Bot } from "@/state/store";
-import { MASCOT_BODY_IDS, MASCOT_BODIES } from "../../shared/mascot-bodies";
+import { MASCOT_BODIES } from "../../shared/mascot-bodies";
+import { GROK_BODY_IDS } from "@/lib/mascot";
 import { HALLOWEEN_BODIES, HALLOWEEN_BODY_IDS } from "../../shared/halloween-bodies";
 import { BotProfileAvatarCard } from "./BotProfileAvatarCard";
 
@@ -39,13 +40,14 @@ function renderCard(bot: Bot) {
 }
 
 describe("BotProfileAvatarCard body picker", () => {
-  it("renders one option per body catalog entry, labeled by name", () => {
+  it("offers only Grok's bodies, labeled by name", () => {
     const markup = renderCard(makeBot());
 
     expect(markup).toContain(">Body<");
-    for (const id of MASCOT_BODY_IDS) {
+    for (const id of GROK_BODY_IDS) {
       expect(markup).toContain(`aria-label="Use the ${MASCOT_BODIES[id].name} body"`);
     }
+    expect(markup).not.toContain(`aria-label="Use the ${MASCOT_BODIES.star.name} body"`);
   });
 
   it("offers the Halloween bodies in their own row", () => {
@@ -62,14 +64,15 @@ describe("BotProfileAvatarCard body picker", () => {
     const markup = renderCard(makeBot());
 
     expect(markup).toContain(`aria-pressed="true" aria-label="Use the ${MASCOT_BODIES.circle.name} body"`);
-    expect(markup).toContain(`aria-pressed="false" aria-label="Use the ${MASCOT_BODIES.star.name} body"`);
+    expect(markup).toContain(`aria-pressed="false" aria-label="Use the ${MASCOT_BODIES.bean.name} body"`);
   });
 
-  it("reflects an explicitly chosen body", () => {
-    const markup = renderCard(makeBot({ mascotBody: "star" }));
+  it("reflects an explicitly chosen body, and shows an old one as the circle it is drawn as", () => {
+    const markup = renderCard(makeBot({ mascotBody: "bean" }));
 
-    expect(markup).toContain(`aria-pressed="true" aria-label="Use the ${MASCOT_BODIES.star.name} body"`);
-    expect(markup).toContain(`aria-pressed="false" aria-label="Use the ${MASCOT_BODIES.cursor.name} body"`);
+    expect(markup).toContain(`aria-pressed="true" aria-label="Use the ${MASCOT_BODIES.bean.name} body"`);
+    expect(markup).toContain(`aria-pressed="false" aria-label="Use the ${MASCOT_BODIES.circle.name} body"`);
+    expect(renderCard(makeBot({ mascotBody: "blob" }))).toContain(`aria-pressed="true" aria-label="Use the ${MASCOT_BODIES.circle.name} body"`);
   });
 
   it("offers zoom and drag framing for a custom image", () => {

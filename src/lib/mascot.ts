@@ -1,3 +1,4 @@
+import { botMascotBody, type MascotBodyId } from "../../shared/mascot-bodies";
 import { CURSOR_STATES, type CursorState } from "@/components/CursorAvatar";
 import type { MausColor } from "../../shared/wire";
 
@@ -131,4 +132,12 @@ export type MascotBotProfile = {
 
 export function stateForBot(bot: MascotBotProfile): MausState {
   return bot.busy ? "working" : "idle";
+}
+
+/** The bodies Grok Bot's mascots wear, in picker order; any other saved body is drawn as a circle. */
+export const GROK_BODY_IDS = ["circle", "pillow", "bean"] as const satisfies readonly MascotBodyId[];
+
+export function grokBody(value: unknown): MascotBodyId {
+  const body = botMascotBody(value);
+  return (GROK_BODY_IDS as readonly MascotBodyId[]).includes(body) ? body : "circle";
 }

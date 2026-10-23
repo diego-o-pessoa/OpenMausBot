@@ -1,29 +1,21 @@
 import { describe, expect, it } from "vitest";
 
+import { DONE_TRACK, PRESS_TRACK, TRACK_STEP_MS, WORKING_TRACK } from "./mascot-tracks";
 import {
   BLINK_MS,
-  DONE_FRONT_MS,
-  DONE_HOPS_MS,
-  DONE_MS,
-  DONE_SMILE_MS,
-  EYE_SPHERE,
-  FRONT_POSE,
-  HAPPY_POSE,
-  IDLE_POSE,
-  REST_BODY,
-  WORKING_GLANCES,
+  HOVER_FACE,
+  IDLE_FACE,
+  TRACK_WRAP_MS,
   blinkOpenness,
-  doneBodyAt,
-  donePoseAt,
-  eyeLengthScale,
   eyeOpacity,
+  faceFromSample,
+  lookToward,
+  mixFace,
   moodForState,
-  pickGlance,
   pillPath,
-  placeEyes,
+  trackDurationMs,
+  trackFaceAt,
 } from "./sphere-mascot";
-
-const DEG = Math.PI / 180;
 
 describe("moodForState", () => {
   it("collapses every busy state into working and everything else into idle", () => {
@@ -36,95 +28,91 @@ describe("moodForState", () => {
   });
 });
 
-describe("placeEyes", () => {
-  it("puts a front-facing pair level and symmetric about the centre", () => {
-    const [left, right] = placeEyes(FRONT_POSE, 100, 100, 50);
-    expect(left.matrix[5]).toBeCloseTo(100, 6);
-    expect(right.matrix[5]).toBeCloseTo(100, 6);
-    expect(left.matrix[4] - 100).toBeCloseTo(-(right.matrix[4] - 100), 6);
-    expect(right.matrix[4] - 100).toBeCloseTo(0.31 * 50, 4);
-    expect(left.depth).toBeGreaterThan(0.85);
-  });
-
-  it("keeps a front-facing eye upright and unsquashed", () => {
-    const [, right] = placeEyes(FRONT_POSE, 0, 0, 1);
-    const [a, b, c, d] = right.matrix;
-    expect(Math.hypot(c, d)).toBeCloseTo(1, 6);
-    expect(b).toBeCloseTo(0, 6);
-    expect(c).toBeCloseTo(0, 6);
-    expect(Math.hypot(a, b)).toBeGreaterThan(0.85);
-  });
-
-  it("rests the idle pair in the upper-right quadrant, the outer eye higher", () => {
-    const [inner, outer] = placeEyes(IDLE_POSE, 0, 0, 1);
-    for (const eye of [inner, outer]) {
-      expect(eye.matrix[4]).toBeGreaterThan(0);
-      expect(eye.matrix[5]).toBeLessThan(0);
-    }
-    expect(outer.matrix[5]).toBeLessThan(inner.matrix[5]);
-    expect(Math.hypot(outer.matrix[4], outer.matrix[5])).toBeLessThanOrEqual(EYE_SPHERE + 1e-9);
-  });
-
-  it("hides the eyes when the face turns away", () => {
-    const away = { ...FRONT_POSE, yaw: 160 * DEG };
-    for (const eye of placeEyes(away, 0, 0, 1)) expect(eyeOpacity(eye.depth)).toBe(0);
-    for (const eye of placeEyes(FRONT_POSE, 0, 0, 1)) expect(eyeOpacity(eye.depth)).toBe(1);
-  });
-});
-
-describe("eyeLengthScale", () => {
-  it("leaves a front face alone and collapses a glance up into dashes", () => {
-    expect(eyeLengthScale(FRONT_POSE)).toBe(1);
-    expect(eyeLengthScale({ ...FRONT_POSE, pitch: 45 * DEG })).toBeLessThan(0.5);
-  });
-
-  it("never shrinks the resting pose", () => {
-    expect(eyeLengthScale(IDLE_POSE)).toBe(1);
-  });
-});
-
-describe("blinkOpenness", () => {
-  it("closes to a slit halfway and opens again", () => {
-    expect(blinkOpenness(-1)).toBe(1);
-    expect(blinkOpenness(0)).toBe(1);
-    expect(blinkOpenness(BLINK_MS / 2)).toBeLessThan(0.1);
-    expect(blinkOpenness(BLINK_MS)).toBe(1);
-  });
-});
-
-describe("the finished-work celebration", () => {
-  it("smiles, then faces front, then hands back to the resting pose", () => {
-    expect(donePoseAt(0)).toBe(HAPPY_POSE);
-    expect(donePoseAt(DONE_SMILE_MS - 1)).toBe(HAPPY_POSE);
-    expect(donePoseAt(DONE_SMILE_MS)).toBe(FRONT_POSE);
-    expect(donePoseAt(DONE_SMILE_MS + DONE_FRONT_MS - 1)).toBe(FRONT_POSE);
-    expect(donePoseAt(DONE_MS)).toBeNull();
-  });
-
-  it("squashes then stretches on each hop and rests between them", () => {
-    expect(doneBodyAt(0)).toBe(REST_BODY);
-    const squash = doneBodyAt(DONE_HOPS_MS[0] + 110);
-    expect(squash.scaleX).toBeGreaterThan(1);
-    expect(squash.scaleY).toBeLessThan(1);
-    const stretch = doneBodyAt(DONE_HOPS_MS[0] + 300);
-    expect(stretch.scaleY).toBeGreaterThan(1);
-    expect(stretch.lift).toBeGreaterThan(0);
-    expect(doneBodyAt(DONE_HOPS_MS[1] - 1)).toBe(REST_BODY);
-  });
-});
-
-describe("pickGlance", () => {
-  it("never repeats the glance it is leaving", () => {
-    for (const previous of WORKING_GLANCES) {
-      for (const roll of [0, 0.25, 0.5, 0.75, 0.999]) {
-        expect(pickGlance(() => roll, previous)).not.toBe(previous);
+describe("the measured tracks", () => {
+  it("carry fourteen numbers per sample and stay inside the body", () => {
+    for (const track of [WORKING_TRACK, DONE_TRACK, PRESS_TRACK]) {
+      for (const sample of track) {
+        expect(sample).toHaveLength(14);
+        for (const eye of faceFromSample(sample).eyes) {
+          expect(Math.hypot(eye.x, eye.y)).toBeLessThanOrEqual(1);
+        }
       }
     }
   });
+
+  it("rest at the end of the finished track exactly where the idle face rests", () => {
+    const end = trackFaceAt(DONE_TRACK, trackDurationMs(DONE_TRACK, false), false);
+    for (const i of [0, 1]) {
+      expect(end.eyes[i].x).toBeCloseTo(IDLE_FACE.eyes[i].x, 1);
+      expect(end.eyes[i].y).toBeCloseTo(IDLE_FACE.eyes[i].y, 1);
+    }
+  });
+
+  it("smiles while it celebrates", () => {
+    expect(trackFaceAt(DONE_TRACK, 2000, false).smile).toBe(1);
+    expect(trackFaceAt(DONE_TRACK, 0, false).smile).toBe(0);
+  });
+
+  it("ducks when pressed", () => {
+    const smallest = Math.min(...PRESS_TRACK.map((sample) => sample[0]));
+    expect(smallest).toBeLessThan(0.75);
+  });
 });
 
-describe("pillPath", () => {
-  it("draws a dot when width and height match", () => {
+describe("trackFaceAt", () => {
+  it("lands on each sample and blends between neighbours", () => {
+    const a = faceFromSample(WORKING_TRACK[3]);
+    const b = faceFromSample(WORKING_TRACK[4]);
+    expect(trackFaceAt(WORKING_TRACK, 3 * TRACK_STEP_MS, true).eyes[0].x).toBeCloseTo(a.eyes[0].x, 6);
+    expect(trackFaceAt(WORKING_TRACK, 3.5 * TRACK_STEP_MS, true).eyes[0].x).toBeCloseTo((a.eyes[0].x + b.eyes[0].x) / 2, 6);
+  });
+
+  it("loops back to the start after easing across the wrap", () => {
+    const total = trackDurationMs(WORKING_TRACK, true);
+    expect(total).toBe((WORKING_TRACK.length - 1) * TRACK_STEP_MS + TRACK_WRAP_MS);
+    expect(trackFaceAt(WORKING_TRACK, total, true).eyes[0].x).toBeCloseTo(faceFromSample(WORKING_TRACK[0]).eyes[0].x, 6);
+  });
+});
+
+describe("mixFace", () => {
+  it("turns an eye the short way round, since a pill has no head or tail", () => {
+    const a = { ...HOVER_FACE, eyes: [{ ...HOVER_FACE.eyes[0], angle: 89 }, HOVER_FACE.eyes[1]] as const };
+    const b = { ...HOVER_FACE, eyes: [{ ...HOVER_FACE.eyes[0], angle: -89 }, HOVER_FACE.eyes[1]] as const };
+    expect(mixFace(a, b, 0.5).eyes[0].angle).toBeCloseTo(90, 6);
+  });
+
+  it("fades an eye in where it appears rather than sliding it across the face", () => {
+    const hidden = { ...HOVER_FACE, eyes: [{ ...HOVER_FACE.eyes[0], length: 0, width: 0, x: 0, y: 0 }, HOVER_FACE.eyes[1]] as const };
+    const half = mixFace(hidden, HOVER_FACE, 0.5).eyes[0];
+    expect(half.x).toBe(HOVER_FACE.eyes[0].x);
+    expect(half.length).toBeCloseTo(HOVER_FACE.eyes[0].length / 2, 6);
+  });
+});
+
+describe("lookToward", () => {
+  it("moves both eyes toward the pointer and no further than its reach", () => {
+    const right = lookToward(HOVER_FACE, 5, 0);
+    expect(right.eyes[0].x).toBeGreaterThan(HOVER_FACE.eyes[0].x);
+    expect(right.eyes[1].x).toBeLessThanOrEqual(1);
+    const down = lookToward(HOVER_FACE, 0, 0.8);
+    expect(down.eyes[0].y).toBeLessThan(0);
+    expect(lookToward(HOVER_FACE, 0, 0).eyes).toEqual(HOVER_FACE.eyes);
+  });
+});
+
+describe("eyes", () => {
+  it("hides an eye of no length", () => {
+    expect(eyeOpacity({ x: 0, y: 0, length: 0, width: 0, angle: 0 })).toBe(0);
+    expect(eyeOpacity(IDLE_FACE.eyes[0])).toBe(1);
+  });
+
+  it("blinks shut halfway and opens again", () => {
+    expect(blinkOpenness(0)).toBe(1);
+    expect(blinkOpenness(BLINK_MS / 2)).toBeLessThan(0.15);
+    expect(blinkOpenness(BLINK_MS)).toBe(1);
+  });
+
+  it("draws a dot when length and width match", () => {
     expect(pillPath(0.3, 0.3)).toContain("A0.1500 0.1500");
   });
 });

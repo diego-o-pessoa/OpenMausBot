@@ -4,7 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MausAvatar, type MausAvatarHandle, type MausAvatarProps } from "./Avatar";
-import { DONE_MS, IDLE_POSE, pillPath } from "./sphere-mascot";
+import { DONE_TRACK } from "./mascot-tracks";
+import { IDLE_FACE, pillPath, trackDurationMs } from "./sphere-mascot";
 import { mascotClock } from "./mascot-clock";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -78,7 +79,7 @@ describe("the mascot on the shared clock", () => {
   it("paints a still mascot in its resting pose and then asks for nothing", () => {
     render([{ state: "sleeping", animated: false, size: 24 }]);
     run(100);
-    expect(eyePaths()[0]).toBe(pillPath(IDLE_POSE.width, IDLE_POSE.length));
+    expect(eyePaths()[0]).toBe(pillPath(IDLE_FACE.eyes[0].length, IDLE_FACE.eyes[0].width));
     frameRequests = 0;
     run(2000);
     expect(frameRequests).toBe(0);
@@ -102,7 +103,7 @@ describe("the mascot on the shared clock", () => {
     render([{ state: "idle", animated: false, size: 36 }]);
     run(500);
     expect(mascotClock().pending()).toBe(1);
-    run(DONE_MS + 1000);
+    run(trackDurationMs(DONE_TRACK, false) + 1000);
     expect(mascotClock().pending()).toBe(0);
   });
 

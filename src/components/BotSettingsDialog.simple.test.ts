@@ -450,17 +450,17 @@ describe("the hero", () => {
 describe("the avatar editor", () => {
   const editor = (bot: Bot) => capture(() => AvatarEditorCard({ bot, activeState: "idle", onPatch: patch, onClose }));
 
-  it("picks one of the twelve bodies, ten Halloween bodies and ten colors for the mascot", () => {
+  it("picks one of Grok's three bodies, ten Halloween bodies and ten colors for the mascot", () => {
     const bot = makeBot();
     const rendered = editor(bot);
-    expect(rendered.html.match(/aria-label="Use the \w+ body"/g)).toHaveLength(22);
+    expect(rendered.html.match(/aria-label="Use the \w+ body"/g)).toHaveLength(13);
     expect(rendered.html).toContain(">Halloween<");
     click(find(rendered, "aria-label", "Use the Pumpkin body"));
     expect(patch).toHaveBeenLastCalledWith({ mascotBody: "pumpkin" });
     expect(rendered.html.match(/aria-label="Use \w+ mascot color"/g)).toHaveLength(10);
     expect(find(rendered, "aria-label", "Use the Circle body").props["aria-pressed"]).toBe(true);
-    click(find(rendered, "aria-label", "Use the Blob body"));
-    expect(patch).toHaveBeenLastCalledWith({ mascotBody: "blob" });
+    click(find(rendered, "aria-label", "Use the Pillow body"));
+    expect(patch).toHaveBeenLastCalledWith({ mascotBody: "pillow" });
     click(find(rendered, "aria-label", "Use blue mascot color"));
     expect(patch).toHaveBeenLastCalledWith({ color: "blue" });
     expect(rendered.html).not.toContain("data-avatar-face");
@@ -469,8 +469,8 @@ describe("the avatar editor", () => {
   it("switches back to the mascot when a body is picked over a picture", () => {
     const bot = makeBot({ avatarUrl: "/api/attachments/cat.webp", avatarCrop: "circle" });
     click(find(editor(bot), "data-avatar-tab", "bot"));
-    click(find(editor(bot), "aria-label", "Use the Star body"));
-    expect(patch).toHaveBeenLastCalledWith({ mascotBody: "star", avatarCrop: "mascot" });
+    click(find(editor(bot), "aria-label", "Use the Bean body"));
+    expect(patch).toHaveBeenLastCalledWith({ mascotBody: "bean", avatarCrop: "mascot" });
   });
 
   it("resets the mascot as the Advanced card does", () => {
