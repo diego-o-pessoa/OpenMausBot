@@ -4,11 +4,11 @@ import { ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import type { LocaleKey } from "@/locales";
-import { MAUS_COLORS, MAUS_COLOR_NAMES, PICKABLE_STATES, type MausState } from "@/lib/mascot";
+import { MAUS_COLORS, MAUS_COLOR_NAMES, type MausState } from "@/lib/mascot";
 import type { Bot } from "@/state/store";
 import { MASCOT_BODIES, MASCOT_BODY_IDS } from "../../../shared/mascot-bodies";
 import { HALLOWEEN_BODIES, HALLOWEEN_BODY_IDS } from "../../../shared/halloween-bodies";
-import { isHalloweenBody, type BotBodyId } from "../../../shared/bot-body";
+import { botBodyId, isHalloweenBody, type BotBodyId } from "../../../shared/bot-body";
 import { useHalloweenDressed, wornBody } from "@/lib/halloween-dress";
 import { MausAvatar } from "../Avatar";
 import { AvatarImageGenerator } from "../AvatarImageGenerator";
@@ -30,25 +30,7 @@ const CROP_KEY: Record<(typeof IMAGE_CROPS)[number], LocaleKey> = {
   square: "botPanel.avatar.square",
 };
 
-const FACE_KEY: Partial<Record<MausState, LocaleKey>> = {
-  idle: "botPanel.face.idle",
-  happy: "botPanel.face.happy",
-  curious: "botPanel.face.curious",
-  drowsy: "botPanel.face.drowsy",
-  working: "botPanel.face.working",
-  thinking: "botPanel.face.thinking",
-  listening: "botPanel.face.listening",
-  sleeping: "botPanel.face.sleeping",
-  suspicious: "botPanel.face.suspicious",
-  proud: "botPanel.face.proud",
-};
-
-const faceLabel = (state: MausState) => {
-  const key = FACE_KEY[state];
-  return key ? t(key) : state;
-};
-
-export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
+export function AvatarEditorCard({ bot, onPatch, onClose }: {
   bot: Bot;
   activeState: MausState;
   onPatch: (patch: AvatarPatch) => void;
@@ -64,7 +46,7 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
     tabsRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
   }, []);
   const pickMascot = (patch: AvatarPatch) => onPatch(crop === "mascot" ? patch : { ...patch, avatarCrop: "mascot" });
-  const body = bot.mascotBody ?? "cursor";
+  const body = botBodyId(bot.mascotBody);
   const costume = wornBody(bot.mascotBody, bot.color, useHalloweenDressed());
   const dressedAs = costume !== body && isHalloweenBody(costume) ? HALLOWEEN_BODIES[costume].name : null;
   const bodyButton = (id: BotBodyId, name: string) => (
@@ -157,25 +139,6 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
                   )}
                   style={{ backgroundColor: MAUS_COLORS[color] }}
                 />
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-1.5 pt-2.5" role="group" aria-label={t("botPanel.avatar.face")}>
-              <span className="mr-0.5 text-[12px] text-ink-tertiary">{t("botPanel.avatar.face")}</span>
-              {PICKABLE_STATES.map((expression) => (
-                <button
-                  key={expression}
-                  type="button"
-                  disabled={busy}
-                  data-avatar-face={expression}
-                  aria-pressed={activeState === expression}
-                  onClick={() => pickMascot({ mascotExpression: expression })}
-                  className={cn(
-                    "rounded-full px-2.5 py-1 text-[12px] disabled:opacity-50",
-                    activeState === expression ? "bg-ink/[0.15] text-ink" : "bg-ink/[0.04] text-ink-secondary hover:text-ink",
-                  )}
-                >
-                  {faceLabel(expression)}
-                </button>
               ))}
             </div>
           </>

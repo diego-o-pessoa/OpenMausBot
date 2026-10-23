@@ -3,39 +3,14 @@ import { describe, expect, it } from "vitest";
 import { stateForBot } from "./mascot";
 
 describe("stateForBot", () => {
-  it("still alerts on a failed tool call when a digest receipt follows it", () => {
-    expect(stateForBot({
-      name: "Atlas",
-      messages: [
-        { kind: "activity", tool: { ok: false } },
-        { kind: "digest" },
-      ],
-    })).toBe("alerting");
+  it("works only while the bot is busy", () => {
+    expect(stateForBot({ name: "Atlas", busy: true })).toBe("working");
   });
 
-  it("keeps reading a pending card as curious behind a receipt", () => {
-    expect(stateForBot({ name: "Atlas", messages: [{ kind: "options" }, { kind: "digest" }] })).toBe("curious");
-  });
-
-  it("still alerts on a failed tool call when a live call's record follows it", () => {
-    expect(stateForBot({
-      name: "Atlas",
-      messages: [
-        { kind: "activity", tool: { ok: false } },
-        { kind: "call" },
-      ],
-    })).toBe("alerting");
-    expect(stateForBot({
-      name: "Atlas",
-      messages: [
-        { kind: "activity", tool: { ok: false } },
-        { kind: "digest" },
-        { kind: "call" },
-      ],
-    })).toBe("alerting");
-  });
-
-  it("keeps reading a pending card as curious behind a live call's record", () => {
-    expect(stateForBot({ name: "Atlas", messages: [{ kind: "options" }, { kind: "call" }] })).toBe("curious");
+  it("rests otherwise, whatever the last message or profile says", () => {
+    expect(stateForBot({ name: "Atlas", messages: [{ kind: "activity", tool: { ok: false } }, { kind: "digest" }] })).toBe("idle");
+    expect(stateForBot({ name: "Atlas", messages: [{ kind: "options" }, { kind: "call" }] })).toBe("idle");
+    expect(stateForBot({ name: "Growth", title: "Marketing lead", unread: true })).toBe("idle");
+    expect(stateForBot({ name: "Atlas", mascotExpression: "sleeping" })).toBe("idle");
   });
 });

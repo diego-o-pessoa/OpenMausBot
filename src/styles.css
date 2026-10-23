@@ -263,16 +263,16 @@
     "Segoe UI", system-ui, sans-serif;
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
-  --identity-green: #009957;
-  --identity-blue: #377FE6;
-  --identity-red: #D94B52;
-  --identity-orange: #E78531;
-  --identity-purple: #8963cc;
-  --identity-cyan: #0EA5C6;
-  --identity-pink: #D84F8B;
-  --identity-yellow: #D8A729;
-  --identity-teal: #01A492;
-  --identity-coral: #E5634E;
+  --identity-green: #34B36A;
+  --identity-blue: #3D82F6;
+  --identity-red: #EF4F4F;
+  --identity-orange: #F19D38;
+  --identity-purple: #885DF3;
+  --identity-cyan: #23B3D8;
+  --identity-pink: #EC5C9F;
+  --identity-yellow: #F2BE2E;
+  --identity-teal: #53B9A6;
+  --identity-coral: #ED722E;
 }
 
 /* ── Atelier ───────────────────────────────────────────────────────────────
@@ -326,16 +326,16 @@
     Roboto, sans-serif;
   --radius-lg: 6px;
   --radius-xl: 10px;
-  --identity-green: #007f48;
-  --identity-blue: #1b6adc;
-  --identity-red: #d12c34;
-  --identity-orange: #a95914;
-  --identity-purple: #8057C8;
-  --identity-cyan: #0a7891;
-  --identity-pink: #ca2d72;
-  --identity-yellow: #896a19;
-  --identity-teal: #017c6f;
-  --identity-coral: #cd361e;
+  --identity-green: #247d4a;
+  --identity-blue: #0e63f4;
+  --identity-red: #db1414;
+  --identity-orange: #a25e0b;
+  --identity-purple: #7b4bf2;
+  --identity-cyan: #187891;
+  --identity-pink: #d31970;
+  --identity-yellow: #8c6909;
+  --identity-teal: #327a6d;
+  --identity-coral: #ba4c10;
 }
 
 /* ── Foundry ───────────────────────────────────────────────────────────────
@@ -394,16 +394,16 @@
     "Segoe UI", system-ui, sans-serif;
   --radius-lg: 4px;
   --radius-xl: 8px;
-  --identity-green: #009957;
-  --identity-blue: #377FE6;
-  --identity-red: #D94B52;
-  --identity-orange: #E78531;
-  --identity-purple: #8c67cd;
-  --identity-cyan: #0EA5C6;
-  --identity-pink: #D84F8B;
-  --identity-yellow: #D8A729;
-  --identity-teal: #01A492;
-  --identity-coral: #E5634E;
+  --identity-green: #34B36A;
+  --identity-blue: #3D82F6;
+  --identity-red: #EF4F4F;
+  --identity-orange: #F19D38;
+  --identity-purple: #885DF3;
+  --identity-cyan: #23B3D8;
+  --identity-pink: #EC5C9F;
+  --identity-yellow: #F2BE2E;
+  --identity-teal: #53B9A6;
+  --identity-coral: #ED722E;
 }
 
 /* ── Lagoon ────────────────────────────────────────────────────────────────
@@ -469,16 +469,16 @@
     Roboto, sans-serif;
   --radius-lg: 8px;
   --radius-xl: 14px;
-  --identity-green: #007945;
-  --identity-blue: #1a65d1;
-  --identity-red: #c82a32;
-  --identity-orange: #a25513;
-  --identity-purple: #7c51c6;
-  --identity-cyan: #0a738b;
-  --identity-pink: #c12b6d;
-  --identity-yellow: #836518;
-  --identity-teal: #01776a;
-  --identity-coral: #c3341d;
+  --identity-green: #237847;
+  --identity-blue: #0b5feb;
+  --identity-red: #d21313;
+  --identity-orange: #9b590b;
+  --identity-purple: #7543f1;
+  --identity-cyan: #16728a;
+  --identity-pink: #ca186a;
+  --identity-yellow: #866408;
+  --identity-teal: #2f7468;
+  --identity-coral: #b1490f;
 }
 
 /* ── Graphite ─────────────────────────────────────────────────────────────
@@ -524,16 +524,16 @@
     "Segoe UI", system-ui, sans-serif;
   --radius-lg: 6px;
   --radius-xl: 10px;
-  --identity-green: #009957;
-  --identity-blue: #377FE6;
-  --identity-red: #D94B52;
-  --identity-orange: #E78531;
-  --identity-purple: #8d69ce;
-  --identity-cyan: #0EA5C6;
-  --identity-pink: #D84F8B;
-  --identity-yellow: #D8A729;
-  --identity-teal: #01A492;
-  --identity-coral: #E5634E;
+  --identity-green: #34B36A;
+  --identity-blue: #3D82F6;
+  --identity-red: #EF4F4F;
+  --identity-orange: #F19D38;
+  --identity-purple: #8a60f3;
+  --identity-cyan: #23B3D8;
+  --identity-pink: #EC5C9F;
+  --identity-yellow: #F2BE2E;
+  --identity-teal: #53B9A6;
+  --identity-coral: #ED722E;
 }
 
 /* ── Linen ────────────────────────────────────────────────────────────────
@@ -579,16 +579,16 @@
     Roboto, sans-serif;
   --radius-lg: 8px;
   --radius-xl: 12px;
-  --identity-green: #007d47;
-  --identity-blue: #1b68d7;
-  --identity-red: #ce2c34;
-  --identity-orange: #a75713;
-  --identity-purple: #7f55c8;
-  --identity-cyan: #0a778e;
-  --identity-pink: #c72c70;
-  --identity-yellow: #886819;
-  --identity-teal: #017a6d;
-  --identity-coral: #c9361e;
+  --identity-green: #247b49;
+  --identity-blue: #0b61f2;
+  --identity-red: #d81414;
+  --identity-orange: #a05c0b;
+  --identity-purple: #7949f1;
+  --identity-cyan: #17768f;
+  --identity-pink: #d0186e;
+  --identity-yellow: #8a6709;
+  --identity-teal: #31786b;
+  --identity-coral: #b74b10;
 }
 
 /* ── Dusk ─────────────────────────────────────────────────────────────────
@@ -633,16 +633,16 @@
     "Segoe UI", system-ui, sans-serif;
   --radius-lg: 8px;
   --radius-xl: 12px;
-  --identity-green: #009957;
-  --identity-blue: #377FE6;
-  --identity-red: #D94B52;
-  --identity-orange: #E78531;
-  --identity-purple: #8d68ce;
-  --identity-cyan: #0EA5C6;
-  --identity-pink: #D84F8B;
-  --identity-yellow: #D8A729;
-  --identity-teal: #01A492;
-  --identity-coral: #E5634E;
+  --identity-green: #34B36A;
+  --identity-blue: #3D82F6;
+  --identity-red: #EF4F4F;
+  --identity-orange: #F19D38;
+  --identity-purple: #895ff3;
+  --identity-cyan: #23B3D8;
+  --identity-pink: #EC5C9F;
+  --identity-yellow: #F2BE2E;
+  --identity-teal: #53B9A6;
+  --identity-coral: #ED722E;
 }
 
 /* ── Daylight ─────────────────────────────────────────────────────────────
@@ -703,16 +703,16 @@
     "Segoe UI", system-ui, sans-serif;
   --radius-lg: 8px;
   --radius-xl: 14px;
-  --identity-green: #00864c;
-  --identity-blue: #2271e3;
-  --identity-red: #d63a42;
-  --identity-orange: #b35e15;
-  --identity-purple: #8057C8;
-  --identity-cyan: #0b7f99;
-  --identity-pink: #d2357a;
-  --identity-yellow: #91701b;
-  --identity-teal: #018375;
-  --identity-coral: #d83920;
+  --identity-green: #26854e;
+  --identity-blue: #1d6df4;
+  --identity-red: #e71515;
+  --identity-orange: #ac630c;
+  --identity-purple: #8255f2;
+  --identity-cyan: #197f9a;
+  --identity-pink: #df1a76;
+  --identity-yellow: #946f09;
+  --identity-teal: #358173;
+  --identity-coral: #c45111;
 }
 
 /* ── Meadow ───────────────────────────────────────────────────────────────
@@ -761,16 +761,16 @@
     "Segoe UI", system-ui, sans-serif;
   --radius-lg: 10px;
   --radius-xl: 16px;
-  --identity-green: #00884e;
-  --identity-blue: #2573e4;
-  --identity-red: #d63f47;
-  --identity-orange: #b65f15;
-  --identity-purple: #8057C8;
-  --identity-cyan: #0b819b;
-  --identity-pink: #d3397d;
-  --identity-yellow: #93721b;
-  --identity-teal: #018577;
-  --identity-coral: #db3a20;
+  --identity-green: #278650;
+  --identity-blue: #206ff5;
+  --identity-red: #ea1a1a;
+  --identity-orange: #ae650c;
+  --identity-purple: #8457f3;
+  --identity-cyan: #19819c;
+  --identity-pink: #e21a78;
+  --identity-yellow: #967109;
+  --identity-teal: #368375;
+  --identity-coral: #c75211;
 }
 
 /* ── Pop ──────────────────────────────────────────────────────────────────
@@ -818,16 +818,16 @@
     -apple-system, system-ui, "Segoe UI", sans-serif;
   --radius-lg: 12px;
   --radius-xl: 18px;
-  --identity-green: #00824a;
-  --identity-blue: #1c6de0;
-  --identity-red: #d4323a;
-  --identity-orange: #ae5b14;
-  --identity-purple: #8057C8;
-  --identity-cyan: #0a7b94;
-  --identity-pink: #cf2e75;
-  --identity-yellow: #8d6c1a;
-  --identity-teal: #017f72;
-  --identity-coral: #d1381f;
+  --identity-green: #25804c;
+  --identity-blue: #1468f4;
+  --identity-red: #e11414;
+  --identity-orange: #a6600c;
+  --identity-purple: #7e50f2;
+  --identity-cyan: #187b95;
+  --identity-pink: #d81972;
+  --identity-yellow: #8f6b09;
+  --identity-teal: #337d70;
+  --identity-coral: #bf4e10;
 }
 
 [data-skin="halloween"] {
@@ -868,16 +868,16 @@
     "Segoe UI", system-ui, sans-serif;
   --radius-lg: 8px;
   --radius-xl: 12px;
-  --identity-green: #009957;
-  --identity-blue: #377FE6;
-  --identity-red: #D94B52;
-  --identity-orange: #E78531;
-  --identity-purple: #8c67cd;
-  --identity-cyan: #0EA5C6;
-  --identity-pink: #D84F8B;
-  --identity-yellow: #D8A729;
-  --identity-teal: #01A492;
-  --identity-coral: #E5634E;
+  --identity-green: #34B36A;
+  --identity-blue: #3D82F6;
+  --identity-red: #EF4F4F;
+  --identity-orange: #F19D38;
+  --identity-purple: #885ef3;
+  --identity-cyan: #23B3D8;
+  --identity-pink: #EC5C9F;
+  --identity-yellow: #F2BE2E;
+  --identity-teal: #53B9A6;
+  --identity-coral: #ED722E;
 }
 
 /* Shiki emits both palettes so cached blocks follow the nearest skin without
@@ -1429,6 +1429,22 @@ body {
   transform-origin: 18px 18px;
   animation: turn-mascot-out 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+@keyframes thinking-dot {
+  0%, 60%, 100% { opacity: 0.45; transform: scale(1); }
+  25% { opacity: 1; transform: scale(1.32); }
+}
+.thinking-dot {
+  animation: thinking-dot 0.9s ease-in-out infinite both;
+}
+@keyframes presence-mascot-in {
+  0% { opacity: 0.6; transform: scaleX(1.9) scaleY(0.3); }
+  55% { opacity: 1; transform: scaleX(0.92) scaleY(1.08); }
+  100% { opacity: 1; transform: none; }
+}
+.presence-mascot-in {
+  transform-origin: 50% 50%;
+  animation: presence-mascot-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 .turn-answer {
   transform-origin: 18px 100%;
   animation: turn-answer-in 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -1599,6 +1615,7 @@ html[data-cloud-intent-morph] [data-tour="composer"] { view-transition-name: clo
   .turn-phrase-in { animation: none; }
   .turn-phrase-out { display: none; }
   .turn-mascot-in, .turn-mascot-out, .turn-answer { animation: none; }
+  .thinking-dot, .presence-mascot-in { animation: none; }
   .reply-bubble-in { animation: none; }
   .animate-rise, .animate-spot-in { animation: none; }
   .animate-ripple, .animate-bolt { animation: none; }

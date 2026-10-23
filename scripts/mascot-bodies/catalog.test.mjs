@@ -9,13 +9,13 @@ import {
 } from "../../shared/mascot-bodies.ts";
 
 describe("the generated catalog", () => {
-  it("carries all ten bodies", () => {
-    expect(MASCOT_BODY_IDS).toHaveLength(10);
+  it("carries all twelve bodies", () => {
+    expect(MASCOT_BODY_IDS).toHaveLength(12);
     for (const id of MASCOT_BODY_IDS) expect(MASCOT_BODIES[id].id).toBe(id);
   });
 
-  it("defaults to the cursor", () => {
-    expect(DEFAULT_MASCOT_BODY).toBe("cursor");
+  it("defaults to the circle", () => {
+    expect(DEFAULT_MASCOT_BODY).toBe("circle");
   });
 
   it("gives every body the markup the renderer expects", () => {
@@ -49,11 +49,11 @@ describe("botMascotBody", () => {
     expect(botMascotBody("blob")).toBe("blob");
   });
 
-  it("falls back to the cursor for anything else", () => {
-    expect(botMascotBody("hexagram")).toBe("cursor");
-    expect(botMascotBody(undefined)).toBe("cursor");
-    expect(botMascotBody(null)).toBe("cursor");
-    expect(botMascotBody(42)).toBe("cursor");
+  it("falls back to the circle for anything else", () => {
+    expect(botMascotBody("hexagram")).toBe("circle");
+    expect(botMascotBody(undefined)).toBe("circle");
+    expect(botMascotBody(null)).toBe("circle");
+    expect(botMascotBody(42)).toBe("circle");
   });
 
   it("exposes a schema that rejects an unknown id", () => {

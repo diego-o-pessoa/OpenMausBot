@@ -227,8 +227,8 @@ export function parseGrokExport(input: unknown): GrokExport {
 
 /** The mascot palette (src/lib/mascot.ts MAUS_COLORS). */
 const PALETTE = {
-  green: "#009957", blue: "#377FE6", red: "#D94B52", orange: "#E78531", purple: "#8057C8",
-  cyan: "#0EA5C6", pink: "#D84F8B", yellow: "#D8A729", teal: "#01A492", coral: "#E5634E",
+  green: "#34B36A", blue: "#3D82F6", red: "#EF4F4F", orange: "#F19D38", purple: "#885DF3",
+  cyan: "#23B3D8", pink: "#EC5C9F", yellow: "#F2BE2E", teal: "#53B9A6", coral: "#ED722E",
 } as const;
 type BotColor = keyof typeof PALETTE;
 

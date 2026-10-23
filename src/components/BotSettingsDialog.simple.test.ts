@@ -450,23 +450,20 @@ describe("the hero", () => {
 describe("the avatar editor", () => {
   const editor = (bot: Bot) => capture(() => AvatarEditorCard({ bot, activeState: "idle", onPatch: patch, onClose }));
 
-  it("picks one of the ten bodies, ten Halloween bodies, ten colors and a face for the mascot", () => {
+  it("picks one of the twelve bodies, ten Halloween bodies and ten colors for the mascot", () => {
     const bot = makeBot();
     const rendered = editor(bot);
-    expect(rendered.html.match(/aria-label="Use the \w+ body"/g)).toHaveLength(20);
+    expect(rendered.html.match(/aria-label="Use the \w+ body"/g)).toHaveLength(22);
     expect(rendered.html).toContain(">Halloween<");
     click(find(rendered, "aria-label", "Use the Pumpkin body"));
     expect(patch).toHaveBeenLastCalledWith({ mascotBody: "pumpkin" });
     expect(rendered.html.match(/aria-label="Use \w+ mascot color"/g)).toHaveLength(10);
-    expect(find(rendered, "aria-label", "Use the Cursor body").props["aria-pressed"]).toBe(true);
+    expect(find(rendered, "aria-label", "Use the Circle body").props["aria-pressed"]).toBe(true);
     click(find(rendered, "aria-label", "Use the Blob body"));
     expect(patch).toHaveBeenLastCalledWith({ mascotBody: "blob" });
     click(find(rendered, "aria-label", "Use blue mascot color"));
     expect(patch).toHaveBeenLastCalledWith({ color: "blue" });
-    expect(find(rendered, "data-avatar-face", "idle").props["aria-pressed"]).toBe(true);
-    click(find(rendered, "data-avatar-face", "proud"));
-    expect(patch).toHaveBeenLastCalledWith({ mascotExpression: "proud" });
-    expect(rendered.html).toContain(">Proud<");
+    expect(rendered.html).not.toContain("data-avatar-face");
   });
 
   it("switches back to the mascot when a body is picked over a picture", () => {
@@ -478,7 +475,7 @@ describe("the avatar editor", () => {
 
   it("resets the mascot as the Advanced card does", () => {
     click(find(editor(makeBot()), "data-avatar-reset"));
-    expect(patch).toHaveBeenLastCalledWith({ avatarCrop: "mascot", color: "green", mascotExpression: null, mascotBody: "cursor" });
+    expect(patch).toHaveBeenLastCalledWith({ avatarCrop: "mascot", color: "green", mascotExpression: null, mascotBody: "circle" });
   });
 
   it("generates with the shared generator, and uploads with shape and framing", () => {
@@ -1062,7 +1059,7 @@ describe("the panel's switches", () => {
     fixture.apps = { phase: "ready", connectedSlugs: ["gmail"], apps: [app("gmail", "write")] };
     const html = capture(() => PageBody({ page: "apps", bot: makeBot({ color: "blue" }), derived: derived() }) as ReactNode).html;
     expect(html.match(/role="switch"/g)).toHaveLength(1);
-    expect(html).toContain("background-color:#377FE6");
+    expect(html).toContain("background-color:#3D82F6");
     expect(Switch).toBeDefined();
   });
 });

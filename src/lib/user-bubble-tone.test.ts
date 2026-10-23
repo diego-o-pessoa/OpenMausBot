@@ -33,7 +33,7 @@ function hueDistance(a: number, b: number): number {
 describe("user bubble tone", () => {
   it.each(MAUS_COLOR_NAMES)("fills %s with a gradient that stays on the bot's hue", (color) => {
     const tone = userBubbleTone(color);
-    expect(tone.ink).toBe(color === "yellow" ? "#101410" : "#ffffff");
+    expect(tone.ink).toBe(color === "yellow" || color === "orange" ? "#101410" : "#ffffff");
     expect(tone.gradient).toBe(`linear-gradient(to bottom left, ${tone.background}, ${tone.deep})`);
     expect(tone.deep).not.toBe(tone.background);
     expect(relativeLuminance(tone.deep)).toBeLessThan(relativeLuminance(tone.background));
@@ -46,7 +46,7 @@ describe("user bubble tone", () => {
 
   it("keeps yellow bright with dark text instead of darkening it to olive", () => {
     const tone = userBubbleTone("yellow");
-    expect(toOklch(tone.background).l).toBeGreaterThan(toOklch(MAUS_COLORS.yellow).l);
+    expect(toOklch(tone.background).l).toBeGreaterThan(0.75);
     expect(contrastRatio(tone.ink, tone.deep)).toBeGreaterThanOrEqual(BUBBLE_TEXT_MIN);
   });
 

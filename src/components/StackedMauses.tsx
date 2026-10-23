@@ -16,19 +16,31 @@ export function StackedMauses({ members, density, large = false }: { members: Bo
       </div>
     );
   }
-  const shown = members.slice(0, 2);
-  const extra = members.length - shown.length;
+  const box = singleSize;
+  const ring = box >= 30 ? 2 : 1.5;
+  const spots: Array<[number, number]> = members.length === 2 ? [[0.32, 0.5], [0.68, 0.5]] : [[0.5, 0.3], [0.3, 0.68], [0.7, 0.68]];
+  const ball = Math.round(box * 0.47);
+  const avatar = Math.round(ball / 0.884);
   return (
     <div className={cn("flex shrink-0 items-center justify-center", slotSize)}>
-      <div className="flex items-center -space-x-2.5">
-        {shown.map((b) => (
-          <BotAvatar key={b.id} bot={b} state="happy" size={iconOnly ? 30 : large ? 26 : 20} animated={false} />
-        ))}
-        {extra > 0 && (
-          <span className="z-10 flex size-4 items-center justify-center rounded-full border border-hairline/40 bg-raised text-[9px] font-medium text-ink-secondary">
-            +{extra}
+      <div className="relative" style={{ width: box, height: box }}>
+        {members.slice(0, spots.length).map((b, i) => (
+          <span
+            key={b.id}
+            className="absolute rounded-full bg-panel"
+            style={{
+              width: ball,
+              height: ball,
+              left: box * spots[i][0] - ball / 2,
+              top: box * spots[i][1] - ball / 2,
+              boxShadow: `0 0 0 ${ring}px var(--color-panel)`,
+            }}
+          >
+            <span className="absolute" style={{ left: (ball - avatar) / 2, top: (ball - avatar) / 2 }}>
+              <BotAvatar bot={b} state="idle" size={avatar} animated={false} trackPointer={false} />
+            </span>
           </span>
-        )}
+        ))}
       </div>
     </div>
   );

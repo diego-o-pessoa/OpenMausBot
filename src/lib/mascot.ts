@@ -1,6 +1,4 @@
 import { CURSOR_STATES, type CursorState } from "@/components/CursorAvatar";
-import { botShowsUnread } from "./bot-unread";
-import { lastNonReceipt } from "./receipts";
 import type { MausColor } from "../../shared/wire";
 
 export { MAUS_COLOR_NAMES, type MausColor } from "../../shared/wire";
@@ -48,16 +46,16 @@ export const STATE_GROUPS = {
 } satisfies Record<string, MausState[]>;
 
 export const MAUS_COLORS = {
-  green: "#009957",
-  blue: "#377FE6",
-  red: "#D94B52",
-  orange: "#E78531",
-  purple: "#8057C8",
-  cyan: "#0EA5C6",
-  pink: "#D84F8B",
-  yellow: "#D8A729",
-  teal: "#01A492",
-  coral: "#E5634E",
+  green: "#34B36A",
+  blue: "#3D82F6",
+  red: "#EF4F4F",
+  orange: "#F19D38",
+  purple: "#885DF3",
+  cyan: "#23B3D8",
+  pink: "#EC5C9F",
+  yellow: "#F2BE2E",
+  teal: "#53B9A6",
+  coral: "#ED722E",
 } satisfies Record<MausColor, string>;
 
 export const MAUS_MOTIONS = [
@@ -132,46 +130,5 @@ export type MascotBotProfile = {
 };
 
 export function stateForBot(bot: MascotBotProfile): MausState {
-  const pinned = normalizeState(bot.mascotExpression);
-  if (pinned) return pinned;
-
-  const last = lastNonReceipt(bot.messages);
-
-  if (last?.kind === "activity" && last.tool?.ok === false) return "alerting";
-  if (bot.busy) return "working";
-  if (botShowsUnread(bot)) return "notifying";
-  if (last?.kind === "options") return "curious";
-
-  const profile = `${bot.name} ${bot.title ?? ""} ${bot.description ?? ""}`.toLowerCase();
-  const matches = (words: RegExp) => words.test(profile);
-
-  if (matches(/\b(code|coding|developer|development|engineer|engineering|build|debug|program|software)\b/)) {
-    return "working";
-  }
-  if (matches(/\b(research|researcher|search|investigate|strategy|strategist|study|learn|knowledge)\b/)) {
-    return "searching";
-  }
-  if (matches(/\b(marketing|growth|launch|campaign|social|sales|outreach|brand)\b/)) {
-    return "excited";
-  }
-  if (matches(/\b(overnight|night|background|async|queue|batch|long-running)\b/)) {
-    return "drowsy";
-  }
-  if (matches(/\b(monitor|monitoring|incident|alert|watch|status|uptime)\b/)) {
-    return "radar";
-  }
-  if (matches(/\b(review|reviewer|audit|critic|critique|quality|qa|test|legal)\b/)) {
-    return "suspicious";
-  }
-  if (matches(/\b(security|secure|compliance|risk|privacy|finance|financial)\b/)) {
-    return "scared";
-  }
-  if (matches(/\b(design|designer|creative|brainstorm|art|illustration|music|story)\b/)) {
-    return "playful";
-  }
-  if (matches(/\b(support|help|success|onboarding|coach|teacher|guide|welcome)\b/)) {
-    return "happy";
-  }
-
-  return "idle";
+  return bot.busy ? "working" : "idle";
 }

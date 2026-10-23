@@ -78,6 +78,7 @@ import { useComposerDockPad } from "@/lib/composer-dock";
 import { GlassBar, GlassScrollFrame } from "./GlassScrollFrame";
 import { awaitedMemberId, showWorkingDots } from "@/lib/turn-tail";
 import { liveActivityPhrases } from "@/lib/live-activity";
+import { PresenceMascot } from "./ThinkingDots";
 import { splitTranscriptAttachments } from "@/lib/composer-attachments";
 import { useTranscriptViewport } from "@/hooks/use-transcript-viewport";
 import { useUnreadDivider } from "@/hooks/use-unread-divider";
@@ -1524,16 +1525,7 @@ export function GroupView({ group }: { group: Group }) {
           )}
           {(speaker || presenceVisible) && (
             <TurnPresence
-              avatar={
-                <BotAvatar
-                  bot={presenceSpeaker ?? { color: "green" }}
-                  state={toolInFlight && !awaited ? "working" : "thinking"}
-                  size={36}
-                  forward={false}
-                  lookAround={1}
-                  trackPointer={false}
-                />
-              }
+              avatar={<PresenceMascot bot={presenceSpeaker ?? { color: "green" }} working={Boolean(toolInFlight && !awaited)} />}
               visible={presenceVisible}
               phrases={activity.phrases}
               phase={activity.phase}

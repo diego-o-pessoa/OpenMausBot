@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MausAvatar, type MausAvatarHandle, type MausAvatarProps } from "./Avatar";
-import { EFFECTS, EXPRESSIONS, POOLS } from "./CursorAvatar";
+import { DONE_MS, IDLE_POSE, pillPath } from "./sphere-mascot";
 import { mascotClock } from "./mascot-clock";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -63,9 +63,8 @@ const render = (avatars: Array<Partial<MausAvatarProps> & { ref?: React.Ref<Maus
   act(() => root.render(avatars.map((props, key) => createElement(MausAvatar, { key, color: "green", ...props }))));
 const run = (ms: number) => act(() => { vi.advanceTimersByTime(ms); });
 const eyePaths = () => [...host.querySelectorAll("svg")].map((svg) => svg.querySelector("g[clip-path] path")!.getAttribute("d"));
-const toPath = (ring: Array<[number, number]>) => "M" + ring.map((p) => p[0].toFixed(2) + " " + p[1].toFixed(2)).join("L") + "Z";
 
-describe("CursorAvatar on the shared clock", () => {
+describe("the mascot on the shared clock", () => {
   it("draws every animated mascot from one animation frame", () => {
     render(Array.from({ length: 12 }, () => ({ state: "working" as const, size: 36 })));
     run(100);
@@ -76,10 +75,10 @@ describe("CursorAvatar on the shared clock", () => {
     expect(mascotClock().pending()).toBe(12);
   });
 
-  it("paints a still mascot with its state's face and then asks for nothing", () => {
+  it("paints a still mascot in its resting pose and then asks for nothing", () => {
     render([{ state: "sleeping", animated: false, size: 24 }]);
     run(100);
-    expect(eyePaths()[0]).toBe(toPath(EXPRESSIONS[POOLS.sleeping[0]][0]));
+    expect(eyePaths()[0]).toBe(pillPath(IDLE_POSE.width, IDLE_POSE.length));
     frameRequests = 0;
     run(2000);
     expect(frameRequests).toBe(0);
@@ -87,13 +86,23 @@ describe("CursorAvatar on the shared clock", () => {
   });
 
   it("redraws a still mascot when its look changes", () => {
-    render([{ state: "idle", animated: false, size: 24, turn: 0 }]);
+    render([{ state: "idle", animated: false, size: 24 }]);
     run(100);
     const eye = () => host.querySelector("g[clip-path] path")!.getAttribute("transform");
     const before = eye();
-    render([{ state: "idle", animated: false, size: 24, turn: 40 }]);
-    run(100);
+    render([{ state: "working", animated: false, size: 24 }]);
+    run(1000);
     expect(eye()).not.toBe(before);
+    expect(mascotClock().pending()).toBe(0);
+  });
+
+  it("celebrates once when work stops, then goes still", () => {
+    render([{ state: "working", animated: false, size: 36 }]);
+    run(100);
+    render([{ state: "idle", animated: false, size: 36 }]);
+    run(500);
+    expect(mascotClock().pending()).toBe(1);
+    run(DONE_MS + 1000);
     expect(mascotClock().pending()).toBe(0);
   });
 
@@ -109,18 +118,6 @@ describe("CursorAvatar on the shared clock", () => {
     run(500);
     expect(frameRequests).toBeGreaterThan(5);
     expect(mascotClock().pending()).toBe(0);
-  });
-
-  it("leaves an alert glyph's layer alone between its appearances", () => {
-    render([{ state: "confused", size: 64 }]);
-    const { period } = EFFECTS.confused!.glyph!;
-    run(period - (performance.now() % period) + 100);
-    const glyphLayer = [...host.querySelectorAll("svg g")].find((g) => (g as SVGGElement).style.opacity === "0")!;
-    const writes = vi.spyOn(glyphLayer, "setAttribute");
-    run(3000);
-    expect(writes).not.toHaveBeenCalled();
-    run(1500);
-    expect(writes).toHaveBeenCalled();
   });
 
   it("stops drawing a mascot that leaves the screen", () => {

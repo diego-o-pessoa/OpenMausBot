@@ -18,7 +18,6 @@ export function ClusterLabel({ bot, name, color }: { bot?: Bot; name: string; co
         motion="none"
         motionKey={0}
         animated={false}
-        readable={known}
       />
       <span
         className={cn("text-[11px] font-medium", known ? "bot-identity" : "text-ink-secondary")}

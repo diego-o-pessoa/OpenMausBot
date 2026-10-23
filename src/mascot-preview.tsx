@@ -1,371 +1,123 @@
 import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import {
-  EYE_SCALE,
-  MausAvatar,
-  MOUTH_WEIGHT,
-  type MausAvatarHandle,
-} from "@/components/Avatar";
-import {
-  MAUS_COLOR_NAMES,
-  MAUS_COLORS,
-  MAUS_MOTIONS,
-  PICKABLE_STATES,
-  STATE_GROUPS,
-  type MausColor,
-  type MausMotion,
-  type MausState,
-} from "@/lib/mascot";
-import { EXPRESSION_COUNT } from "@/components/CursorAvatar";
+import { BotAvatar } from "@/components/Avatar";
+import { SphereMascot, type SphereMascotHandle } from "@/components/SphereMascot";
+import { ThinkingDots, PresenceMascot } from "@/components/ThinkingDots";
+import { FRONT_POSE, HAPPY_POSE, HOVER_POSE, IDLE_POSE, WORKING_GLANCES, type EyePose, type MascotMood } from "@/components/sphere-mascot";
+import { MAUS_COLOR_NAMES, MAUS_COLORS, type MausColor } from "@/lib/mascot";
+import { MASCOT_BODIES, MASCOT_BODY_IDS, type MascotBodyId } from "../shared/mascot-bodies";
 import "./styles.css";
 import "./mascot-preview.css";
 
-interface ScenarioLabels extends Partial<Record<MausState, string>> {}
-
-const SCENARIOS: ScenarioLabels = {
-  idle: "General / admin",
-  happy: "Support / guide",
-  curious: "Awaiting input",
-  drowsy: "Overnight / async",
-  working: "Code / build",
-  thinking: "Research / strategy",
-  listening: "Dictation / voice",
-  sleeping: "Paused / stopped",
-  suspicious: "Review / audit",
-  proud: "Task completed",
-};
-
-const MOTION_SCENARIOS = {
-  arrive: "New bot created",
-  switch: "Active bot changed",
-  customize: "Appearance updated",
-  alert: "Needs attention",
-  thinking: "Waiting for input",
-  working: "Task in progress",
-  launch: "Computer starting",
-  success: "Step completed",
-  celebrate: "Turn finished",
-  blink: "New reply",
-  surprise: "Unread update",
-  failure: "Action failed",
-} satisfies Record<Exclude<MausMotion, "none">, string>;
-
-const MOTION_COLORS: MausColor[] = [
-  "green", "blue", "purple", "red", "cyan", "orange",
-  "teal", "green", "pink", "yellow", "coral", "red",
+const NAMED_POSES: Array<[string, EyePose]> = [
+  ["idle", IDLE_POSE],
+  ["front", FRONT_POSE],
+  ["hover", HOVER_POSE],
+  ["happy", HAPPY_POSE],
+  ...WORKING_GLANCES.map((g, i): [string, EyePose] => [`glance ${i}`, g.pose]),
 ];
 
-type Tuning = {
-  eyeScale: number;
-  mouthStroke: number;
-  spring: number;
-  turn: number;
-  gazeX: number;
-  gazeY: number;
-};
-
-const DEFAULTS: Tuning = {
-  eyeScale: EYE_SCALE,
-  mouthStroke: MOUTH_WEIGHT,
-  spring: 7,
-  turn: 0,
-  gazeX: 0,
-  gazeY: 0,
-};
-
-const SLIDERS: { key: keyof Tuning; min: number; max: number; step: number; hint: string }[] = [
-  { key: "eyeScale", min: 0.4, max: 2, step: 0.01, hint: "eye size" },
-  { key: "mouthStroke", min: 2, max: 26, step: 0.5, hint: "mouth thickness" },
-  { key: "spring", min: 2, max: 20, step: 0.5, hint: "morph stiffness" },
-  { key: "turn", min: -180, max: 180, step: 1, hint: "head turn — body stays still" },
-  { key: "gazeX", min: -1, max: 1, step: 0.01, hint: "gaze across" },
-  { key: "gazeY", min: -1, max: 1, step: 0.01, hint: "gaze up/down" },
-];
-
-function Tuner({
-  tuning,
-  setTuning,
-  state,
-  setState,
-  expression,
-  setExpression,
-  color,
-  setColor,
-  forward,
-  setForward,
-}: {
-  tuning: Tuning;
-  setTuning: (t: Tuning) => void;
-  state: MausState;
-  setState: (s: MausState) => void;
-  expression: number | undefined;
-  setExpression: (e: number | undefined) => void;
-  color: MausColor;
-  setColor: (c: MausColor) => void;
-  forward: boolean;
-  setForward: (v: boolean) => void;
-}) {
-  const handle = useRef<MausAvatarHandle>(null);
-  const changed = (Object.keys(DEFAULTS) as (keyof Tuning)[]).filter(
-    (k) => tuning[k] !== DEFAULTS[k],
-  );
-
+function PoseSheet() {
+  const params = new URLSearchParams(location.search);
+  const size = Number(params.get("size") ?? 200);
+  const color = (params.get("color") ?? "orange") as MausColor;
   return (
-    <section className="tuner">
-      <div className="tuner-stage">
-        <MausAvatar
-          ref={handle}
-          color={color}
-          state={state}
-          expression={expression}
-          size={300}
-          label={`${state} maus`}
-          eyeScale={tuning.eyeScale}
-          mouthStroke={tuning.mouthStroke}
-          spring={tuning.spring}
-          turn={tuning.turn}
-          forward={forward}
-          gaze={{ x: tuning.gazeX, y: tuning.gazeY }}
-        />
-        <div className="tuner-readout">
-          <strong>{state}</strong>
-          <span>{expression === undefined ? "drifting" : `pinned ${expression}`}</span>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 0, background: "#f0f0f0", width: 5 * size }}>
+      {NAMED_POSES.map(([name, pose]) => (
+        <div key={name} style={{ width: size, height: size + 18, position: "relative" }}>
+          <div style={{ font: "12px monospace", height: 18, paddingLeft: 4 }}>{name}</div>
+          <SphereMascot pose={pose} size={size} fill={MAUS_COLORS[color]} silhouette={MASCOT_BODIES.circle} interactive={false} />
         </div>
-        <div className="tuner-buttons">
-          <button type="button" onClick={() => handle.current?.blink()}>Blink</button>
-          <button type="button" onClick={() => handle.current?.spin(900)}>Spin</button>
-          <button
-            type="button"
-            className={forward ? "on" : ""}
-            onClick={() => setForward(!forward)}
-          >
-            Forward
-          </button>
-          <button type="button" onClick={() => setTuning(DEFAULTS)}>Reset</button>
-        </div>
-      </div>
+      ))}
+    </div>
+  );
+}
 
-      <div className="tuner-controls">
-        <div className="tuner-block">
-          <h3>Geometry</h3>
-          {SLIDERS.map(({ key, min, max, step, hint }) => (
-            <label className="tuner-slider" key={key}>
-              <span className="tuner-slider-name">
-                {key}
-                <em>{hint}</em>
+function Solo() {
+  const params = new URLSearchParams(location.search);
+  const ref = useRef<SphereMascotHandle>(null);
+  const [mood, setMood] = useState<MascotMood>(params.get("solo") === "done" ? "working" : ((params.get("solo") ?? "working") as MascotMood));
+  useEffect(() => {
+    if (params.get("solo") !== "done") return;
+    const timer = setTimeout(() => setMood("idle"), 600);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <div style={{ background: "#f0f0f0", width: 200, height: 200 }}>
+      <SphereMascot ref={ref} mood={mood} size={200} fill={MAUS_COLORS.orange} silhouette={MASCOT_BODIES.circle} interactive={false} />
+    </div>
+  );
+}
+
+function Mood({ mood, color, body, size }: { mood: MascotMood; color: MausColor; body: MascotBodyId; size: number }) {
+  const ref = useRef<SphereMascotHandle>(null);
+  return (
+    <button type="button" onClick={() => ref.current?.celebrate()} title="Click to celebrate" style={{ background: "none", border: 0, padding: 0 }}>
+      <SphereMascot ref={ref} mood={mood} size={size} fill={MAUS_COLORS[color]} silhouette={MASCOT_BODIES[body]} />
+    </button>
+  );
+}
+
+const ROSTER: Array<{ name: string; color: MausColor; body: MascotBodyId; busy?: boolean; unread?: boolean }> = [
+  { name: "Chief", color: "teal", body: "circle" },
+  { name: "Sales Outbound", color: "orange", body: "circle", busy: true },
+  { name: "Inbox Manager", color: "blue", body: "bean", unread: true },
+  { name: "Account Manager", color: "purple", body: "pillow" },
+  { name: "Talent Scout", color: "blue", body: "circle" },
+  { name: "Expense Manager", color: "coral", body: "circle" },
+];
+
+function Gallery() {
+  const [working, setWorking] = useState(true);
+  return (
+    <main style={{ padding: 24, display: "grid", gap: 28, background: "#fdfdfd", color: "#111", font: "14px system-ui" }}>
+      <section>
+        <h2>Roster</h2>
+        <label><input type="checkbox" checked={working} onChange={(e) => setWorking(e.target.checked)} /> Sales Outbound working</label>
+        <div style={{ width: 260, marginTop: 12 }}>
+          {ROSTER.map((bot) => (
+            <div key={bot.name} style={{ display: "flex", alignItems: "center", gap: 10, height: 55, padding: "0 8px", borderRadius: 12, background: bot.busy ? "#f0f0f0" : undefined, position: "relative" }}>
+              <span style={{ position: "relative", display: "inline-flex" }}>
+                <BotAvatar bot={{ name: bot.name, color: bot.color, mascotBody: bot.body }} state={bot.busy && working ? "working" : "idle"} size={38} />
+                {bot.unread && <span style={{ position: "absolute", width: 11, height: 11, left: 18, top: 1, borderRadius: 99, background: "#FD3C2F", boxShadow: "0 0 0 2px #fdfdfd" }} />}
               </span>
-              <input
-                type="range"
-                min={min}
-                max={max}
-                step={step}
-                value={tuning[key]}
-                onChange={(e) => setTuning({ ...tuning, [key]: Number(e.target.value) })}
-              />
-              <output>{tuning[key]}</output>
-            </label>
-          ))}
-        </div>
-
-        <div className="tuner-block">
-          <h3>Values to keep</h3>
-          <pre className="tuner-code">
-            {changed.length === 0
-              ? "// defaults — nothing to change"
-              : changed.map((k) => `${k}: ${tuning[k]},`).join("\n")}
-          </pre>
-
-          <h3>Colour</h3>
-          <div className="chips">
-            {MAUS_COLOR_NAMES.map((c) => (
-              <button
-                key={c}
-                type="button"
-                className={c === color ? "on" : ""}
-                onClick={() => setColor(c)}
-              >
-                <span className="swatch" style={{ background: MAUS_COLORS[c] }} />
-                {c}
-              </button>
-            ))}
-          </div>
-
-          <h3>Expression pin</h3>
-          <div className="chips">
-            <button
-              type="button"
-              className={expression === undefined ? "on" : ""}
-              onClick={() => setExpression(undefined)}
-            >
-              auto
-            </button>
-            {Array.from({ length: EXPRESSION_COUNT }, (_, i) => (
-              <button
-                key={i}
-                type="button"
-                className={expression === i ? "on" : ""}
-                onClick={() => setExpression(i)}
-              >
-                {String(i).padStart(2, "0")}
-              </button>
-            ))}
-          </div>
-
-          {Object.entries(STATE_GROUPS).map(([group, names]) => (
-            <div key={group}>
-              <h3>{group}</h3>
-              <div className="chips">
-                {names.map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    className={state === name ? "on" : ""}
-                    onClick={() => {
-                      setState(name);
-                      setExpression(undefined);
-                    }}
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
+              <span>{bot.name}</span>
             </div>
           ))}
         </div>
-      </div>
-    </section>
-  );
-}
-
-function MotionCard({
-  motion,
-  index,
-  replayAll,
-  color,
-}: {
-  motion: Exclude<MausMotion, "none">;
-  index: number;
-  replayAll: number;
-  color: MausColor;
-}) {
-  const [replayOne, setReplayOne] = useState(0);
-
-  return (
-    <article className="motion-card">
-      <div className="motion-stage">
-        <MausAvatar
-          color={color ?? MOTION_COLORS[index]}
-          state="idle"
-          size={172}
-          motion={motion}
-          motionKey={replayAll * 100 + replayOne}
-          label={`${motion} motion`}
-        />
-      </div>
-      <footer className="motion-meta">
-        <div>
-          <span className="motion-number">{String(index + 1).padStart(2, "0")}</span>
-          <h2>{motion}</h2>
-          <p>{MOTION_SCENARIOS[motion]}</p>
-        </div>
-        <button type="button" onClick={() => setReplayOne((value) => value + 1)}>
-          Replay
-        </button>
-      </footer>
-    </article>
-  );
-}
-
-function Preview() {
-  const [replayAll, setReplayAll] = useState(0);
-  const [tuning, setTuning] = useState<Tuning>(DEFAULTS);
-  const [state, setState] = useState<MausState>("idle");
-  const [expression, setExpression] = useState<number | undefined>(undefined);
-  const [color, setColor] = useState<MausColor>("green");
-  const [forward, setForward] = useState(true);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => setReplayAll((value) => value + 1), 4600);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  return (
-    <main className="preview-shell">
-      <header className="preview-header">
-        <div>
-          <p className="eyebrow">Morphing face engine · 25 expressions · 39 states</p>
-          <h1>Maus motion library</h1>
-          <p className="intro">
-            The app&rsquo;s lit body with the face engine behind it. Expressions morph on a
-            spring, blink on each state&rsquo;s own rhythm, and the eyes wrap around an implied
-            sphere so a turn reads as a head turning — the silhouette itself never rotates.
-          </p>
-        </div>
-        <button className="replay-all" type="button" onClick={() => setReplayAll((v) => v + 1)}>
-          <span aria-hidden="true">↻</span>
-          Replay all motions
-        </button>
-      </header>
-
-      <Tuner
-        tuning={tuning}
-        setTuning={setTuning}
-        state={state}
-        setState={setState}
-        expression={expression}
-        setExpression={setExpression}
-        color={color}
-        setColor={setColor}
-        forward={forward}
-        setForward={setForward}
-      />
-
-      <section className="motion-grid" aria-label="Mascot motion library">
-        {MAUS_MOTIONS.map((motion, index) => (
-          <MotionCard
-            key={motion}
-            motion={motion}
-            index={index}
-            replayAll={replayAll}
-            color={MOTION_COLORS[index]}
-          />
+      </section>
+      <section>
+        <h2>Moods (click one to celebrate)</h2>
+        {(["idle", "working"] as const).map((mood) => (
+          <div key={mood} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8 }}>
+            <code style={{ width: 70 }}>{mood}</code>
+            {MAUS_COLOR_NAMES.map((color) => <Mood key={color} mood={mood} color={color} body="circle" size={64} />)}
+          </div>
         ))}
       </section>
-
-      <section className="expression-library" aria-labelledby="expression-heading">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Identity system · 100 combinations</p>
-            <h2 id="expression-heading">Colors and states</h2>
-          </div>
-          <p>Move your pointer over any Maus to test the responsive eyes.</p>
+      <section>
+        <h2>Bodies</h2>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {MASCOT_BODY_IDS.map((body) => (
+            <figure key={body} style={{ margin: 0, textAlign: "center" }}>
+              <Mood mood="idle" color="purple" body={body} size={72} />
+              <Mood mood="working" color="purple" body={body} size={72} />
+              <figcaption>{body}</figcaption>
+            </figure>
+          ))}
         </div>
-
-        <div className="matrix-wrap">
-          <div className="matrix">
-            <div className="corner-label">Color ↓ / state →</div>
-            {PICKABLE_STATES.map((s) => (
-              <div className="column-label" key={s}>
-                <strong>{s}</strong>
-                <span>{SCENARIOS[s]}</span>
-              </div>
-            ))}
-
-            {MAUS_COLOR_NAMES.map((c) => (
-              <div className="matrix-row" key={c}>
-                <div className="row-label">
-                  <span className="swatch" style={{ background: MAUS_COLORS[c] }} />
-                  <strong>{c}</strong>
-                  <code>{MAUS_COLORS[c]}</code>
-                </div>
-                {PICKABLE_STATES.map((s) => (
-                  <div className="mascot-cell" key={`${c}-${s}`}>
-                    <MausAvatar color={c} state={s} size={86} label={`${c} ${s} maus`} />
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
+      </section>
+      <section>
+        <h2>Sizes</h2>
+        <div style={{ display: "flex", gap: 16, alignItems: "end" }}>
+          {[16, 18, 24, 38, 64, 120, 220].map((size) => <Mood key={size} mood="working" color="orange" body="circle" size={size} />)}
+        </div>
+      </section>
+      <section>
+        <h2>Thinking</h2>
+        <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+          <ThinkingDots color={MAUS_COLORS.orange} />
+          <PresenceMascot bot={{ name: "Sales Outbound", color: "orange" }} working={working} />
         </div>
       </section>
     </main>
@@ -373,7 +125,5 @@ function Preview() {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <Preview />
-  </StrictMode>,
+  <StrictMode>{new URLSearchParams(location.search).has("poses") ? <PoseSheet /> : new URLSearchParams(location.search).has("solo") ? <Solo /> : <Gallery />}</StrictMode>,
 );

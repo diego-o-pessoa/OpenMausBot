@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { BODY_DEFS, BODY_IDS } from "./builders.ts";
 
 const EXPECTED_IDS = [
-  "cursor", "blob", "circle", "squircle", "capsule",
+  "circle", "pillow", "bean", "cursor", "blob", "squircle", "capsule",
   "drop", "shield", "hexagon", "diamond", "star",
 ];
 
 describe("body builders", () => {
-  it("produces the catalog in its persisted order, cursor first", () => {
+  it("produces the catalog in picker order, circle first", () => {
     expect(BODY_IDS).toEqual(EXPECTED_IDS);
   });
 

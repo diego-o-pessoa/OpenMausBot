@@ -11,11 +11,11 @@ describe("bot bodies", () => {
     for (const id of BOT_BODY_IDS) expect(botBodySchema.safeParse(id).success).toBe(true);
   });
 
-  it("falls back to the cursor for anything it does not know", () => {
+  it("falls back to the circle for anything it does not know", () => {
     expect(botBodyId("pumpkin")).toBe("pumpkin");
     expect(botBodyId("star")).toBe("star");
-    expect(botBodyId("hexagram")).toBe("cursor");
-    expect(botBodyId(undefined)).toBe("cursor");
+    expect(botBodyId("hexagram")).toBe("circle");
+    expect(botBodyId(undefined)).toBe("circle");
   });
 
   it("tells the Halloween bodies apart", () => {

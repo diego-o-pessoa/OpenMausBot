@@ -80,7 +80,7 @@ describe("BotListItem", () => {
     expect(teammate).not.toContain("font-semibold text-warning");
 
     const working = renderRow(bot({ busy: true }));
-    expect(opening(working, "working-dot")).toContain("size-2.5");
+    expect(working).not.toContain('data-testid="working-dot"');
     expect(working).not.toContain("waiting-dot");
     expect(working).not.toContain("font-semibold text-warning");
 
@@ -301,10 +301,11 @@ describe("BotListItem", () => {
     expect(markup).toContain('class="sr-only">Working…');
   });
 
-  it("marks the avatar with a green presence dot only while the bot works", () => {
-    expect(renderRow(bot({ busy: true }))).toContain('data-testid="working-dot"');
-    expect(renderRow(bot())).not.toContain('data-testid="working-dot"');
-    expect(renderRow(bot({ busy: true, activity: "waiting-on-you" }))).not.toContain('data-testid="working-dot"');
+  it("lets the mascot show work and puts a red dot on its crown only when unread", () => {
+    expect(renderRow(bot({ busy: true }))).not.toContain('data-testid="working-dot"');
+    expect(renderRow(bot({ unread: true }))).toContain('data-testid="unread-badge"');
+    expect(renderRow(bot())).not.toContain('data-testid="unread-badge"');
+    expect(renderRow(bot({ unread: true, activity: "waiting-on-you" }))).not.toContain('data-testid="unread-badge"');
   });
 
   it("marks the bot this window is on a Live call with by a green phone badge", () => {
@@ -336,7 +337,7 @@ describe("BotListItem", () => {
 
   it("keeps real sibling work visible while another thread waits for a teammate", () => {
     const markup = renderRow(bot({ waitingForTeammates: true, busy: true, activity: "working" }));
-    expect(markup).toContain('data-testid="working-dot"');
+    expect(markup).toContain('<span class="flex h-[1.5em] items-center" role="status">');
     expect(markup).not.toContain('data-testid="teammate-wait-dot"');
   });
 
