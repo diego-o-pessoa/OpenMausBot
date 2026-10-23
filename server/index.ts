@@ -9373,6 +9373,10 @@ routines = new RoutineManager({
   },
   createGoalTask: (groupId, title) => store.createGroupTask(groupId, title, false),
   goalTaskExists: (groupId, threadId) => Boolean(store.groupTaskByThread(groupId, threadId)),
+  roomMainThread: (groupId) => {
+    const tasks = store.group(groupId)?.tasks ?? [];
+    return tasks.reduce<(typeof tasks)[number] | undefined>((first, task) => (!first || task.createdAt < first.createdAt ? task : first), undefined)?.threadId ?? null;
+  },
   isResultsThread: (botId, threadId) => {
     const bot = store.bot(botId);
     const task = store.taskByThread(botId, threadId);

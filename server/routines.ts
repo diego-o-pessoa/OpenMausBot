@@ -210,6 +210,8 @@ export interface RoutineManagerOptions {
   joinConversation?: (run: RoutineRun) => string | null;
   createGoalTask?: (groupId: string, title: string) => { threadId: string } | null;
   goalTaskExists?: (groupId: string, threadId: string) => boolean;
+  /** The room's first conversation, where its team goals run. */
+  roomMainThread?: (groupId: string) => string | null;
   isResultsThread?: (botId: string, threadId: string) => boolean;
   resolveResultsThread?: (routine: Routine, forceNew: boolean) => { threadId: string; main?: true } | undefined;
   eventResultsThread?: (event: { webhookId: string; webhookName: string; botId: string }) => string | undefined;
@@ -1434,19 +1436,19 @@ export class RoutineManager {
       : "The assigned bot no longer exists";
   }
 
-  /** A room goal keeps one conversation per routine: the latest run's, while it still exists and nothing else runs in it. */
+  /** A room goal runs in the room's first conversation, else the routine's latest one; never one another run still uses. */
   private reusableGoalThread(run: RoutineRun): string | null {
-    if (!run.groupId || !this.options.goalTaskExists) return null;
+    const groupId = run.groupId;
+    if (!groupId || !this.options.goalTaskExists) return null;
     const previous = this.runs
       .filter((other) => other.id !== run.id && other.routineId === run.routineId && other.target === "room-goal"
-        && other.groupId === run.groupId && other.threadId)
+        && other.groupId === groupId && other.threadId)
       .sort((a, b) => (b.startedAt ?? b.createdAt ?? 0) - (a.startedAt ?? a.createdAt ?? 0))[0];
-    const threadId = previous?.threadId;
-    if (!threadId) return null;
-    const occupied = this.runs.some((other) => other.id !== run.id && other.threadId === threadId
-      && ["queued", "running", "waiting"].includes(other.status));
-    if (occupied) return null;
-    return this.options.goalTaskExists(run.groupId, threadId) ? threadId : null;
+    const candidates = [this.options.roomMainThread?.(groupId), previous?.threadId];
+    return candidates.find((threadId): threadId is string => Boolean(threadId)
+      && !this.runs.some((other) => other.id !== run.id && other.threadId === threadId
+        && ["queued", "running", "waiting"].includes(other.status))
+      && this.options.goalTaskExists!(groupId, threadId!)) ?? null;
   }
 
   private initialOccurrence(schedule: RoutineSchedule, now: number): number | null {

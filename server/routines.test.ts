@@ -3885,6 +3885,35 @@ describe("room goal conversations", () => {
     expect(h.startedGoals.map((goal) => goal.threadId)).toEqual(["goal-thread-1", "goal-thread-2"]);
   });
 
+  it("runs in the room's first conversation when the room has one", async () => {
+    const h = harness();
+    h.options.goalTaskExists = () => true;
+    h.options.roomMainThread = () => "room-main";
+    const routine = h.manager.create(roomGoal);
+    const first = h.manager.runNow(routine.id)!;
+    await h.manager.tick();
+    h.manager.finishGoalRun(first.id, "completed", "Nothing new.");
+    h.manager.runNow(routine.id);
+    await h.manager.tick();
+
+    expect(h.goalTasks).toEqual([]);
+    expect(h.startedGoals.map((goal) => goal.threadId)).toEqual(["room-main", "room-main"]);
+  });
+
+  it("leaves the room's first conversation to a run still using it", async () => {
+    const h = harness();
+    h.options.goalTaskExists = () => true;
+    h.options.roomMainThread = () => "room-main";
+    const routine = h.manager.create(roomGoal);
+    h.manager.runNow(routine.id);
+    await h.manager.tick();
+    h.manager.runNow(routine.id);
+    await h.manager.tick();
+
+    const threads = h.manager.listRuns().map((run) => run.threadId).filter(Boolean);
+    expect(threads.filter((threadId) => threadId === "room-main")).toHaveLength(1);
+  });
+
   it("never joins a conversation another run of it is still using", async () => {
     const h = harness();
     h.options.goalTaskExists = () => true;
