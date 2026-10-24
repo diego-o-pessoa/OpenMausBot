@@ -175,9 +175,9 @@ it("pulls a fresh backup from the paired computer and stages it for the usual re
     return Response.json({ error: "not found" }, { status: 404 });
   }) as typeof fetch;
   expect((await post("/api/workspace-backup/pull", {})).status).toBe(409);
-  writeFileSync(join(dataDir, "workspace-source.json"), JSON.stringify({ address: "http://127.0.0.1:18799", token: remoteToken, pairedAt: "2026-10-24T00:00:00Z" }));
+  writeFileSync(join(dataDir, "workspace-source.json"), JSON.stringify({ address: "http://127.0.0.1:38799", token: remoteToken, pairedAt: "2026-10-24T00:00:00Z" }));
   expect(await fetch(`${url}/api/workspace-backup/source`, { headers: { authorization: `Bearer ${admin.token}` } }).then((response) => response.json()))
-    .toEqual({ source: { address: "http://127.0.0.1:18799", pairedAt: "2026-10-24T00:00:00Z" } });
+    .toEqual({ source: { address: "http://127.0.0.1:38799", pairedAt: "2026-10-24T00:00:00Z" } });
 
   let pulled: { bytes: string; password: string } | null = null;
   archive.stage.mockImplementationOnce(async (_dataDir: string, file: string, options: { password: string }) => {
@@ -189,11 +189,11 @@ it("pulls a fresh backup from the paired computer and stages it for the usual re
   const response = await post("/api/workspace-backup/pull", {});
   expect(response.status).toBe(200);
   const staged = await response.json() as { id: string; source: { address: string } };
-  expect(staged.source.address).toBe("http://127.0.0.1:18799");
+  expect(staged.source.address).toBe("http://127.0.0.1:38799");
   expect(pulled).toEqual({ bytes: "pulled encrypted bytes", password: expect.stringMatching(/^[\w-]{32}$/) });
   expect(calls).toEqual([
-    `POST http://127.0.0.1:18799/api/workspace-backup/export Bearer ${remoteToken}`,
-    `GET http://127.0.0.1:18799/api/workspace-backup/download/remote-backup Bearer ${remoteToken}`,
+    `POST http://127.0.0.1:38799/api/workspace-backup/export Bearer ${remoteToken}`,
+    `GET http://127.0.0.1:38799/api/workspace-backup/download/remote-backup Bearer ${remoteToken}`,
   ]);
   expect(readdirSync(join(dataDir, ".backups", "uploads"))).toEqual([]);
   expect((await post("/api/workspace-backup/restore", { id: staged.id, confirmation: "REPLACE" })).status).toBe(200);

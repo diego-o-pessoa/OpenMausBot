@@ -103,7 +103,7 @@ export function WorkspaceSourceSettings() {
       </> : <form className="flex flex-col gap-3" onSubmit={(event) => { event.preventDefault(); void connect(); }}>
         <label className="text-[13px] text-ink">{t("backup.sync.address")}
           <input type="text" inputMode="url" autoComplete="off" spellCheck={false} maxLength={2048} required disabled={disabled}
-            placeholder="http://127.0.0.1:18799" value={address} onChange={(event) => setAddress(event.target.value)} className={`${inputClass} mt-1`} />
+            placeholder="http://127.0.0.1:38799" value={address} onChange={(event) => setAddress(event.target.value)} className={`${inputClass} mt-1`} />
         </label>
         <label className="text-[13px] text-ink">{t("backup.sync.code")}
           <input type="text" autoComplete="off" spellCheck={false} maxLength={64} disabled={disabled}

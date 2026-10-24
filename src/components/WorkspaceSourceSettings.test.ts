@@ -51,16 +51,16 @@ it("connects with the tunnel address and the other computer's pairing code", asy
   await mount(null);
   const view = render();
   const [address, code] = view.nodes.filter((node) => node.type === "input");
-  expect(address.props.placeholder).toBe("http://127.0.0.1:18799");
-  change(address, "http://127.0.0.1:18799"); change(code, "ABCD-EFGH-JKLM");
-  fixture.api.mockResolvedValueOnce({ source: { address: "http://127.0.0.1:18799", pairedAt: "2026-10-24T00:00:00Z" } });
+  expect(address.props.placeholder).toBe("http://127.0.0.1:38799");
+  change(address, "http://127.0.0.1:38799"); change(code, "ABCD-EFGH-JKLM");
+  fixture.api.mockResolvedValueOnce({ source: { address: "http://127.0.0.1:38799", pairedAt: "2026-10-24T00:00:00Z" } });
   render().nodes.find((node) => node.type === "form")!.props.onSubmit!({ preventDefault: vi.fn() }); await flush();
-  expect(fixture.api).toHaveBeenCalledWith("/api/workspace-backup/source", { method: "POST", body: JSON.stringify({ address: "http://127.0.0.1:18799", code: "ABCD-EFGH-JKLM" }) });
-  expect(render().html).toContain("Connected to http://127.0.0.1:18799");
+  expect(fixture.api).toHaveBeenCalledWith("/api/workspace-backup/source", { method: "POST", body: JSON.stringify({ address: "http://127.0.0.1:38799", code: "ABCD-EFGH-JKLM" }) });
+  expect(render().html).toContain("Connected to http://127.0.0.1:38799");
 });
 
 it("pulls a copy, shows what it holds and replaces only after an exact REPLACE", async () => {
-  await mount({ address: "http://127.0.0.1:18799", pairedAt: "2026-10-24T00:00:00Z" });
+  await mount({ address: "http://127.0.0.1:38799", pairedAt: "2026-10-24T00:00:00Z" });
   expect(render().html).not.toContain("Replace installation");
   fixture.api.mockResolvedValueOnce({ id: "stage-id", summary });
   button("Sync now").props.onClick!(); await flush();
@@ -79,8 +79,8 @@ it("pulls a copy, shows what it holds and replaces only after an exact REPLACE",
 });
 
 it("shows why a sync failed and offers no replacement", async () => {
-  await mount({ address: "http://127.0.0.1:18799", pairedAt: "2026-10-24T00:00:00Z" });
-  fixture.api.mockRejectedValueOnce(new Error("http://127.0.0.1:18799 could not be reached. Check that OpenMausBot is open there and that the SSH tunnel is running."));
+  await mount({ address: "http://127.0.0.1:38799", pairedAt: "2026-10-24T00:00:00Z" });
+  fixture.api.mockRejectedValueOnce(new Error("http://127.0.0.1:38799 could not be reached. Check that OpenMausBot is open there and that the SSH tunnel is running."));
   button("Sync now").props.onClick!(); await flush();
   const html = render().html;
   expect(html).toContain('role="alert"');
@@ -89,7 +89,7 @@ it("shows why a sync failed and offers no replacement", async () => {
 });
 
 it("disconnects and goes back to the connect form", async () => {
-  await mount({ address: "http://127.0.0.1:18799", pairedAt: "2026-10-24T00:00:00Z" });
+  await mount({ address: "http://127.0.0.1:38799", pairedAt: "2026-10-24T00:00:00Z" });
   fixture.api.mockResolvedValueOnce({ source: null });
   button("Disconnect").props.onClick!(); await flush();
   expect(fixture.api).toHaveBeenCalledWith("/api/workspace-backup/source", { method: "DELETE" });

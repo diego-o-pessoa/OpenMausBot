@@ -16,8 +16,10 @@ routines arrive paused.
 
 Plain HTTP is accepted only for a loopback address (`127.0.0.1`, `localhost`,
 `::1`): the local end of an SSH tunnel, which encrypts the traffic. Any other
-address needs HTTPS. The desktop server listens on `127.0.0.1:8799` by default
-(the next free port if that one is taken).
+address needs HTTPS. The desktop server listens on `127.0.0.1:8799`, or on
+18799 or 28799 when that one is taken, so keep the tunnel off those three ports
+on both computers: a desktop that has to move to another port opens with a new
+window origin and loses that window's saved preferences.
 
 Open the tunnel so that a port on **this** computer's loopback reaches the
 source's `127.0.0.1:8799`. When this OpenMausBot runs inside a Docker container,
@@ -26,14 +28,14 @@ that loopback is the container's, not the Docker host's. Either:
 - from inside this computer (or container), with an SSH server on the source:
 
   ```sh
-  ssh -N -L 18799:127.0.0.1:8799 you@windows-pc
+  ssh -N -L 38799:127.0.0.1:8799 you@windows-pc
   ```
 
 - or from the source, into this computer (or into the container's own SSH
   server):
 
   ```sh
-  ssh -N -R 18799:127.0.0.1:8799 you@linux-box
+  ssh -N -R 38799:127.0.0.1:8799 you@linux-box
   ```
 
 Then:
@@ -42,7 +44,7 @@ Then:
    computer**, keep **Full access**, and create a code. It is single-use and
    lasts five minutes.
 2. Here, in **Settings → Backups → Sync from another computer**, enter
-   `http://127.0.0.1:18799` and the code (or paste the whole pairing link), and
+   `http://127.0.0.1:38799` and the code (or paste the whole pairing link), and
    choose **Connect**.
 3. Choose **Sync now**, check the summary, type `REPLACE`, and restart.
 

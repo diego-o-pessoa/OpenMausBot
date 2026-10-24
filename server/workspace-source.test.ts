@@ -65,8 +65,8 @@ afterEach(async () => {
 
 describe("parseSourceAddress", () => {
   it("accepts plain HTTP only on loopback, the local end of an SSH tunnel", () => {
-    expect(parseSourceAddress("http://127.0.0.1:18799")).toEqual({ address: "http://127.0.0.1:18799", code: null });
-    expect(parseSourceAddress("localhost:18799/").address).toBe("http://localhost:18799");
+    expect(parseSourceAddress("http://127.0.0.1:38799")).toEqual({ address: "http://127.0.0.1:38799", code: null });
+    expect(parseSourceAddress("localhost:38799/").address).toBe("http://localhost:38799");
     expect(parseSourceAddress("https://maus.example.com").address).toBe("https://maus.example.com");
     for (const remote of ["http://192.168.0.10:8799", "http://maus.example.com", "http://10.0.0.2"]) {
       expect(() => parseSourceAddress(remote)).toThrow(/SSH tunnel/);
@@ -74,8 +74,8 @@ describe("parseSourceAddress", () => {
   });
 
   it("takes the code out of a pairing link and refuses anything else after the address", () => {
-    expect(parseSourceAddress("http://127.0.0.1:18799/pair#code=ABCD-EFGH-JKLM")).toEqual({ address: "http://127.0.0.1:18799", code: "ABCD-EFGH-JKLM" });
-    for (const bad of ["http://user:pw@127.0.0.1:18799", "http://127.0.0.1:18799/api", "http://127.0.0.1:18799/?x=1", "ftp://127.0.0.1", "http://127.0.0.1:18799/#other"]) {
+    expect(parseSourceAddress("http://127.0.0.1:38799/pair#code=ABCD-EFGH-JKLM")).toEqual({ address: "http://127.0.0.1:38799", code: "ABCD-EFGH-JKLM" });
+    for (const bad of ["http://user:pw@127.0.0.1:38799", "http://127.0.0.1:38799/api", "http://127.0.0.1:38799/?x=1", "ftp://127.0.0.1", "http://127.0.0.1:38799/#other"]) {
       expect(() => parseSourceAddress(bad)).toThrow();
     }
   });

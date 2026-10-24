@@ -46,11 +46,11 @@ export function parseSourceAddress(text: string): { address: string; code: strin
   if (url.protocol !== "http:" && url.protocol !== "https:") throw failure("The address must start with http:// or https://.");
   if (url.username || url.password) throw failure("Leave the user name and password out of the address.");
   if (url.protocol === "http:" && !isLoopbackHost(url.host)) {
-    throw failure("Without HTTPS, connect through an SSH tunnel and use its local address, such as http://127.0.0.1:18799.");
+    throw failure("Without HTTPS, connect through an SSH tunnel and use its local address, such as http://127.0.0.1:38799.");
   }
-  if (url.search || (url.pathname !== "/" && url.pathname !== "/pair")) throw failure("Enter only the address, such as http://127.0.0.1:18799.");
+  if (url.search || (url.pathname !== "/" && url.pathname !== "/pair")) throw failure("Enter only the address, such as http://127.0.0.1:38799.");
   const code = /^#code=([A-Za-z0-9-]{4,64})$/.exec(url.hash)?.[1] ?? null;
-  if (url.hash && !code) throw failure("Enter only the address, such as http://127.0.0.1:18799.");
+  if (url.hash && !code) throw failure("Enter only the address, such as http://127.0.0.1:38799.");
   return { address: url.origin, code };
 }
 
