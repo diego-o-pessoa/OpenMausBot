@@ -158,6 +158,26 @@ Mais recente primeiro. Modelo de entrada:
 - **Como verificar:** comando ou passo usado.
 ```
 
+### 2026-10-24 — Ensinar tarefas (etapas 1 a 5)
+- **O quê:** no painel do navegador do bot, menu **⋮ → Ensinar uma tarefa…** grava o que a pessoa faz
+  (cliques, digitação, escolhas em listas, navegação) como passos com o nome de cada elemento. Senhas e o
+  que é digitado por "Digitar um segredo" nunca são gravados. Ao concluir, a pessoa revisa os passos, diz
+  para que serve a tarefa e clica **Ensinar**: o app envia `/teach demo-<id> <objetivo>` e o bot escreve a
+  habilidade, que fica pendente de revisão. O cartão da proposta ganhou **Testar antes de habilitar**: abre
+  uma conversa nova com `/test-skill <id>`, o bot segue a habilidade ainda desabilitada e termina com
+  "Skill test: passed/failed"; o cartão mostra o resultado. Habilitar continua manual.
+- **Onde:** `server/browser/demo-recorder.ts`, `server/browser/viewers/demo-targets.ts`,
+  `server/browser/viewers/demo-input.ts` (+2 linhas em `viewers/core.ts`), `server/browser/service.ts`,
+  `server/browser/engines.ts`, `server/browser-demos.ts` (gravações em `<dados>/demos/<bot>/`),
+  `server/routes/browser-demos.ts` + `browser-viewers.ts` (`GET/POST /api/bots/:id/browser/demo`),
+  `server/skill-learn.ts` (`/teach`), `server/skill-test.ts` + `routes/bot-messages.ts`
+  (`GET /api/bots/:id/skill-tests/:stagedId`), `src/components/browser/TeachBar.tsx`, `SkillTestRow.tsx`.
+- **Limites:** só no motor de navegador novo (painel do desktop). Não grava o computador local nem as VMs.
+- **Como verificar:** testes `server/browser/*demo*`, `server/skill-test.test.ts`, `server/skill-learn.test.ts`;
+  com Chrome: `OMB_CDP_E2E=1 npx vitest run server/browser/viewers/stream-v2.e2e.test.ts`.
+- **Pendente:** o teste de limite de tamanho falha por crescimento de `server/index.ts`, `server/routines.ts`
+  e `GroupView.tsx` vindo de commits de 2026-10-23 (rotinas de equipe), não deste trabalho.
+
 ### 2026-10-22 — Mascote refeito a partir de medições do vídeo do Grok Bot
 - **O quê:** os olhos do Grok foram medidos quadro a quadro no vídeo (10 vezes por segundo: posição,
   comprimento, largura e inclinação de cada olho, tamanho e esticão do corpo) e o mascote agora reproduz

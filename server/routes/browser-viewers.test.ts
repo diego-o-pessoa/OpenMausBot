@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { BrowserHostError, SETUP_COMMAND } from "../browser/chrome/host-setup.ts";
 import type { Audience } from "../audience.ts";
 import type { Download } from "../browser/cdp/downloads.ts";
+import type { DemoStep } from "../browser/demo-recorder.ts";
 import type { BrowserService } from "../browser/service.ts";
 import type { Viewer, ViewerOptions, ViewerOutput } from "../browser/viewers/core.ts";
 import { STREAM_CLOSE, StreamV2 } from "../browser/viewers/stream-v2.ts";
@@ -58,6 +59,10 @@ interface Fixture {
   /** The last v1 view's check that it still shows the browser it opened on. */
   isCurrent: () => boolean;
   dataDir: string;
+  /** The teaching recorder the fake browser holds: null while nothing is recorded. */
+  recording: DemoStep[] | null;
+  browserOpen?: boolean;
+  demoEngine?: "old";
 }
 
 const servers: Server[] = [];
@@ -73,7 +78,7 @@ async function serve({ attach, current = () => true, download, audience = () => 
   download?: (id: string) => Download | undefined;
   audience?: (threadId: string | null) => Audience | null;
 } = {}): Promise<Fixture> {
-  const fixture = { origin: "", attachments: [], inputs: [], answers: [], pickerChecks: 0, resumes: [], opened: [], checked: [], dataDir: mkdtempSync(join(tmpdir(), "omb-browser-viewers-")) } as unknown as Fixture;
+  const fixture = { origin: "", attachments: [], inputs: [], answers: [], pickerChecks: 0, resumes: [], opened: [], checked: [], recording: null, dataDir: mkdtempSync(join(tmpdir(), "omb-browser-viewers-")) } as unknown as Fixture;
   folders.push(fixture.dataDir);
   const viewer = { id: "viewer", input: async (message: unknown) => { fixture.inputs.push(message); }, close: async () => {} } as unknown as Viewer;
   const service = {
@@ -109,6 +114,18 @@ async function serve({ attach, current = () => true, download, audience = () => 
         return chooser === "chooser-1";
       },
       download: (_browser, id) => download?.(id),
+      startDemo: () => {
+        if (fixture.demoEngine === "old") return null;
+        if (!fixture.browserOpen) return false;
+        fixture.recording = [];
+        return true;
+      },
+      demo: () => (fixture.recording ? { steps: fixture.recording, truncated: false } : null),
+      stopDemo: () => {
+        const steps = fixture.recording;
+        fixture.recording = null;
+        return steps ? { steps, truncated: false } : null;
+      },
     },
     audience: (_auth, threadId) => audience(threadId),
     browser: async (botId, opened) => {
@@ -401,5 +418,49 @@ describe("whose browser a view shows on a Team Cloud", () => {
     expect(fixture.isCurrent(), "an open view stops showing a conversation the person no longer sees").toBe(false);
     expect(await act()).toBe(404);
     expect(fixture.opened).toEqual(["member:p_ada", "member:p_ada"]);
+  });
+});
+
+describe("teaching a task", () => {
+  const demoUrl = (fixture: Fixture) => `http://${fixture.origin}/api/bots/pepper/browser/demo`;
+  const post = (fixture: Fixture, action: string) => fetch(demoUrl(fixture), { method: "POST", body: JSON.stringify({ action }) });
+  const step: DemoStep = { kind: "click", url: "https://example.com", at: 1, target: { role: "button", name: "Save", tag: "button", editable: false, secret: false } };
+
+  it("starts only on an open browser of the new engine", async () => {
+    const fixture = await serve();
+    expect(await (await fetch(demoUrl(fixture))).json() as unknown).toEqual({ recording: false });
+    expect((await post(fixture, "start")).status).toBe(409);
+    fixture.demoEngine = "old";
+    fixture.browserOpen = true;
+    const old = await post(fixture, "start");
+    expect(old.status).toBe(409);
+    expect((await old.json() as { error: string }).error).toContain("browser panel of the desktop app");
+    fixture.demoEngine = undefined;
+    expect((await post(fixture, "start")).status).toBe(200);
+    expect((await (await fetch(demoUrl(fixture))).json() as { recording: boolean }).recording).toBe(true);
+  });
+
+  it("saves a stopped demonstration with its steps in words, and keeps nothing when discarded", async () => {
+    const fixture = await serve();
+    fixture.browserOpen = true;
+    await post(fixture, "start");
+    fixture.recording!.push(step);
+    const stopped = await (await post(fixture, "stop")).json() as { demo: { id: string; steps: DemoStep[] }; text: string };
+    expect(stopped.text).toBe(["(starting on https://example.com)", '1. Click the button "Save"'].join("\n"));
+    expect(readdirSync(join(fixture.dataDir, "demos", "pepper"))).toEqual([`${stopped.demo.id}.json`]);
+    await post(fixture, "start");
+    fixture.recording!.push(step);
+    expect(await (await post(fixture, "discard")).json() as unknown).toEqual({ recording: false });
+    expect(readdirSync(join(fixture.dataDir, "demos", "pepper"))).toHaveLength(1);
+    expect((await post(fixture, "stop")).status).toBe(409);
+  });
+
+  it("refuses a change once the browser it was opened on is no longer the bot's", async () => {
+    let current = true;
+    const fixture = await serve({ current: () => current });
+    fixture.browserOpen = true;
+    current = false;
+    expect((await post(fixture, "start")).status).toBe(409);
+    expect(fixture.recording).toBeNull();
   });
 });

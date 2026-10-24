@@ -27,6 +27,11 @@ const COPY_MODIFIER = process.platform === "darwin" ? META : CONTROL;
 const STILL = `<!doctype html><title>still</title><style>html,body{margin:0;height:100%;background:#fff;font:16px system-ui}</style><p>still page</p>`;
 const REPORT = `<!doctype html><title>report</title><style>html,body{margin:0;height:100%}#c{position:absolute;left:50%;top:50%;width:80px;height:80px;margin:-40px 0 0 -40px;background:#c33}</style><div id="c"></div>
 <script>addEventListener("mousedown", (event) => { document.title = "at " + event.clientX + "," + event.clientY + (event.target.id === "c" ? " hit" : " miss") + " of " + innerWidth + "x" + innerHeight; });</script>`;
+const TEACH = `<!doctype html><title>teach</title><style>body{margin:0;font:16px system-ui}label,input,button,select{position:absolute;left:20px}#el{top:10px}#e{top:30px;width:240px;height:30px}#pl{top:80px}#p{top:100px;width:240px;height:30px}#b{top:160px;width:120px;height:36px}#c{top:220px;width:200px;height:30px}</style>
+<label id="el" for="e">Work email</label><input id="e" type="email">
+<label id="pl" for="p">Password</label><input id="p" type="password">
+<button id="b">Sign in</button>
+<select id="c" aria-label="Country"><option>Argentina</option><option>Brazil</option></select>`;
 const ANIMATED = `<!doctype html><title>animated</title><style>@keyframes spin{to{transform:rotate(360deg)}}#s{width:60px;height:60px;background:#36c;animation:spin 1s linear infinite}</style><div id="s"></div>`;
 const FORM = `<!doctype html><title>form</title><style>body{margin:0}#f{position:absolute;left:20px;top:20px;width:240px;height:40px}#s{position:absolute;left:20px;top:100px;width:200px;height:30px}#d{position:absolute;left:20px;top:160px}#p{position:absolute;left:20px;top:220px;margin:0}</style>
 <input id="f" type="file" multiple accept=".txt,text/plain">
@@ -69,6 +74,9 @@ suite("the v2 stream on real Chrome", () => {
         fileChooserOffered: (_browser, owner, chooser) => real.service.fileChooserOffered(target.session, owner, chooser),
         answerFileChooser: (_browser, owner, chooser, paths) => real.service.answerFileChooser(target.session, owner, chooser, paths),
         download: (_browser, id) => real.service.download(target.session, id),
+        startDemo: () => real.service.startDemo(target.session),
+        demo: () => real.service.demo(target.session),
+        stopDemo: () => real.service.stopDemo(target.session),
       },
       audience: () => "team",
       browser: async (botId) => ({ botId, session: target.session, spec: { command: "omb-cdp", args: [target.key], env: {} } }),
@@ -257,6 +265,31 @@ suite("the v2 stream on real Chrome", () => {
     expect(popup.rect).toMatchObject({ x: 20, y: 100, width: 200, height: 30 });
     client.send({ type: "selectChoose", id: popup.id, index: 2 });
     await until(() => real.peek<string>(target, "document.title"), (title) => title === "chose Cherry");
+    await client.close();
+  }, hostTimeout(90_000));
+
+  it("records what the person teaches as named steps, keeping nothing typed into the password", async () => {
+    await opened("/teach", TEACH);
+    const client = await connect("width=1280&height=800&maxWidth=2560&maxHeight=1600");
+    const demo = (action: string) => fetch(`http://${origin}/api/bots/pepper/browser/demo`, { method: "POST", body: JSON.stringify({ action }) });
+    expect((await demo("start")).status).toBe(200);
+    await takeControl(client);
+    click(client, 60, 45);
+    client.send({ type: "text", text: "ana@acme.com" });
+    click(client, 60, 115);
+    client.send({ type: "text", text: "hunter2" });
+    click(client, 60, 178);
+    click(client, 60, 235);
+    const popup = await client.next<{ id: string }>("selectPopup");
+    client.send({ type: "selectChoose", id: popup.id, index: 1 });
+    await until(() => real.peek<string>(target, "document.getElementById('c').value"), (value) => value === "Brazil");
+    const stopped = await (await demo("stop")).json() as { demo: { steps: Array<Record<string, unknown>> }; text: string };
+    expect(stopped.demo.steps.map((step) => step.kind)).toEqual(["click", "type", "click", "type", "click", "select"]);
+    expect(stopped.text).toContain('Type "ana@acme.com" into the textbox "Work email"');
+    expect(stopped.text).toContain('secret value (7 characters, not recorded) into the textbox "Password"');
+    expect(stopped.text).toContain('Click the button "Sign in"');
+    expect(stopped.text).toContain('Choose "Brazil" in the combobox "Country"');
+    expect(JSON.stringify(stopped)).not.toContain("hunter2");
     await client.close();
   }, hostTimeout(90_000));
 

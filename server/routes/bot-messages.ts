@@ -19,6 +19,7 @@ import type { ReplyTarget } from "../replies.ts";
 import type { RequestAuth } from "../request-auth.ts";
 import type { RoutineManager } from "../routines.ts";
 import { acceptedSendMatch, parseSendId } from "../send-idempotency.ts";
+import { skillTestStatus } from "../skill-test.ts";
 import { cancelSteeredMessage, holdSteeredQueue, queuedSteeredMessage, restoreHeldSteeredQueue, settleHeldSteeredQueue } from "../steer-queue.ts";
 import type { BotRecord, GroupRecord, Message, Store } from "../store.ts";
 import { extractSteerImages } from "../turn-images.ts";
@@ -130,6 +131,9 @@ const guardedSendSchema = z.object({
     name: z.string().trim().min(1).max(120).optional(),
   }).strict().refine((who) => Boolean(who.email || who.name)).optional(),
 }).strict().refine((send) => (send.text === undefined) !== (send.reaction === undefined));
+
+/** A test runs in a conversation of its own, started moments before: only the newest are searched. */
+const SKILL_TEST_THREADS = 20;
 
 export function createBotMessageRoutes(deps: BotMessageRouteDeps): RouteHandler {
   const {
@@ -618,6 +622,18 @@ export function createBotMessageRoutes(deps: BotMessageRouteDeps): RouteHandler 
         return json(res, 200, { ok: true, outcome });
       });
     }
+    m = path.match(/^\/api\/bots\/([\w-]+)\/skill-tests\/([0-9a-f-]{36})$/);
+    if (m && method === "GET") {
+      const bot = store.bot(m[1]);
+      if (!bot) return json(res, 404, { error: "no such bot" });
+      const threads = store.tasks(bot.id)
+        .filter((task) => !task.archivedAt && !cloudThreadRefusal(auth, task.threadId))
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, SKILL_TEST_THREADS)
+        .map((task) => ({ threadId: task.threadId, busy: threadBusy(bot.id, task.threadId), messages: store.messagesFor(task.threadId) }));
+      return json(res, 200, skillTestStatus(threads, m[2].toLowerCase()));
+    }
+
     m = path.match(/^\/api\/bots\/([\w-]+)\/interrupt$/);
     if (m && method === "POST") {
       const bot = store.bot(m[1]);

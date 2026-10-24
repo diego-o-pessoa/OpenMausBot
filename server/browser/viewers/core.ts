@@ -20,6 +20,7 @@ import { editingCommands, keyDescription, US_KEYBOARD } from "../cdp/keyboard.ts
 import type { ProfileControl, TakeResult } from "../control.ts";
 import { personUrl } from "../dispatch.ts";
 import type { Tab } from "../tabs.ts";
+import { recordAround } from "./demo-input.ts";
 import { ACCEPT_OF, chooseOption, cursorAt, editableAt, selectAt, type SelectPopup } from "./popups.ts";
 import { MIN_WINDOW_WIDTH, VIEWPORT_LIMITS, VIEWPORT_PRESETS, viewportFor, ZOOM_LIMITS, zoomedLayout, type ViewportSetting } from "./viewport.ts";
 
@@ -425,6 +426,7 @@ export class ViewerHub {
   readonly host: HubHost;
   readonly viewers = new Set<Viewer>();
   setting: ViewportSetting = { mode: "fill" };
+  recorder: Parameters<typeof recordAround>[0] | null = null;
   zoom = 1;
   #order = 0;
   #chooser: { id: string; tab: Tab; viewer: Viewer; open: OpenFileChooser } | null = null;
@@ -862,11 +864,11 @@ export class ViewerHub {
         viewer.select = null;
         const index = num(message.index, -1);
         if (!select || select.id !== message.id || select.tab !== tab || !Number.isInteger(index) || index < 0) return;
-        await control.human(viewer.id, tab, () => chooseOption(tab.page, select.id, index));
+        await control.human(viewer.id, tab, () => this.recorder ? recordAround(this.recorder, tab, message, () => chooseOption(tab.page, select.id, index)) : chooseOption(tab.page, select.id, index));
         return;
       }
     }
-    await control.human(viewer.id, tab, () => this.#dispatch(viewer, tab, message));
+    await control.human(viewer.id, tab, () => this.recorder ? recordAround(this.recorder, tab, message, () => this.#dispatch(viewer, tab, message)) : this.#dispatch(viewer, tab, message));
   }
 
   /** A press on a dropdown list: the viewer draws its options, since no frame shows Chrome's own popup. */

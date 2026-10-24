@@ -28,7 +28,7 @@ const sameSetting = (a: PreviewViewportSetting, b: PreviewViewportSetting) =>
 const item = "flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left hover:bg-inset disabled:cursor-not-allowed disabled:opacity-40";
 const small = "rounded-md border border-hairline p-1 text-ink-secondary hover:bg-inset hover:text-ink disabled:opacity-40";
 
-export function MoreMenu({ stream, ready, typing, setting, zoom, pip, onViewport, onZoom, onPip, onType, onSecret, onReconnect, onRestart }: {
+export function MoreMenu({ stream, ready, typing, setting, zoom, pip, onViewport, onZoom, onPip, onType, onSecret, onTeach, onReconnect, onRestart }: {
   /** Viewport sizes, zoom and picture in picture come with the v2 stream only. */
   stream: boolean;
   /** The person holds the browser, so its page can be sized and zoomed. */
@@ -43,6 +43,8 @@ export function MoreMenu({ stream, ready, typing, setting, zoom, pip, onViewport
   onPip: () => void;
   onType: () => void;
   onSecret: () => void;
+  /** Teaching records the person's own inputs, which only the v2 stream carries through the harness. */
+  onTeach?: () => void;
   onReconnect: () => void;
   onRestart: () => void;
 }) {
@@ -77,6 +79,7 @@ export function MoreMenu({ stream, ready, typing, setting, zoom, pip, onViewport
           {stream && pip ? <button type="button" role="menuitem" className={item} onClick={run(onPip)}>{pip.open ? "Close the floating view" : "Pop out (picture in picture)"}</button> : null}
           <button type="button" role="menuitem" className={item} disabled={!typing} onClick={run(onType)}>Type or paste text…</button>
           <button type="button" role="menuitem" className={item} disabled={!typing} onClick={run(onSecret)}>{t("browser.typeSecret")}</button>
+          {stream && onTeach ? <button type="button" role="menuitem" className={item} onClick={run(onTeach)}>{t("browser.teach.start")}</button> : null}
         </>)}
         {section(<>
           <button type="button" role="menuitem" className={item} onClick={run(onReconnect)}>Reconnect view</button>

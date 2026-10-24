@@ -385,7 +385,7 @@ import { createSkillsLibraryHost } from "./host/skills-library.ts";
 import { skillExport } from "./skill-export.ts";
 import { pickBotName } from "./names.ts";
 import { botSkillTemplateSchema, newBotDefaultsSchema } from "./new-bot-defaults.ts";
-import { expandLearnTurnText, learnSource } from "./skill-learn.ts";
+import { expandLearnTurnText, learnSource, taughtDemo } from "./skill-learn.ts";
 import { connectedAppsForSetup, expandSetupTurnText, setupModeActive, setupSystemPrompt, type SetupConnectedApps } from "./setup-mode.ts";
 import type { SkillRequestCardData } from "../shared/skill-request.ts";
 import { checkSoulDrift, readSoulDrift, soulFile, writeSoulMirror } from "./bot-folder.ts";
@@ -8423,7 +8423,7 @@ async function startTurn(
         : providerText;
       const setupText = agentsMounted ? expandSetupTurnText(skillCommandText) : skillCommandText;
       const userTurnText = (opts?.app?.context ?? "") + withReactionNotes(promptWithReply(
-        skillAuthoring ? expandLearnTurnText(setupText) : setupText,
+        skillAuthoring ? expandLearnTurnText(setupText, (ref) => taughtDemo(DATA_DIR, bot.id, ref), (id) => listStagedSkillWrites(bot.id).find((entry) => entry.id === id) ?? null) : setupText,
         opts?.replyTo,
         cfg.profile?.name?.trim() || "User",
       ), personLine ? activeMessages : [], skipTranscript, cfg.profile?.name?.trim() || "User");

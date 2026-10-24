@@ -7,7 +7,7 @@ import { isSkillName } from "./skill-md.ts";
 
 /** Commands the app already owns. A skill with one of these names keeps
  * working through the prompt index, but `/name` stays the built-in. */
-export const BUILT_IN_SLASH_COMMANDS: readonly string[] = ["goal", "learn", "setup"];
+export const BUILT_IN_SLASH_COMMANDS: readonly string[] = ["goal", "learn", "setup", "teach", "test-skill"];
 
 export interface SkillCommand {
   name: string;
@@ -29,4 +29,9 @@ export function parseSkillCommand(text: string, skills: Iterable<string>): Skill
 /** Whether a skill can be offered as `/name` without shadowing a built-in. */
 export function offersSkillCommand(name: string): boolean {
   return isSkillName(name) && !BUILT_IN_SLASH_COMMANDS.includes(name);
+}
+
+/** The message that tries a pending skill proposal once, in a conversation of its own, before the person enables it. */
+export function skillTestCommand(stagedId: string, request = ""): string {
+  return `/test-skill ${stagedId}${request.trim() ? ` ${request.trim()}` : ""}`;
 }

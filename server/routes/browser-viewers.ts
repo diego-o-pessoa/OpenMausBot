@@ -14,6 +14,7 @@ import type { BrowserLive } from "../browser-live.ts";
 import type { LiveRouter } from "../browser/engines.ts";
 import { messageFileDisposition } from "../message-file.ts";
 import { isSameOrigin, type RequestAuth } from "../request-auth.ts";
+import { demoRoute } from "./browser-demos.ts";
 import { PASS, type RouteHandler } from "./table.ts";
 import type { Upgrades } from "./upgrades.ts";
 
@@ -21,6 +22,7 @@ const LIVE = /^\/api\/bots\/([\w-]+)\/browser\/(live|action)$/;
 const STREAM = /^\/api\/bots\/([\w-]+)\/browser\/stream$/;
 const UPLOAD = /^\/api\/bots\/([\w-]+)\/browser\/upload$/;
 const DOWNLOAD = /^\/api\/bots\/([\w-]+)\/browser\/download\/([\w-]{1,64})$/;
+const DEMO = /^\/api\/bots\/([\w-]+)\/browser\/demo$/;
 const CHOOSER = /^[\w-]{1,64}$/;
 const UPLOAD_MAX_FILES = 20;
 const UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
@@ -31,7 +33,7 @@ type Failure = { status: number; error: string };
 
 export interface BrowserViewerRouteDeps {
   upgrades: Upgrades;
-  viewers: Pick<LiveRouter, "open" | "action" | "stream" | "fileChooserOffered" | "answerFileChooser" | "download">;
+  viewers: Pick<LiveRouter, "open" | "action" | "stream" | "fileChooserOffered" | "answerFileChooser" | "download" | "startDemo" | "demo" | "stopDemo">;
   /** Whose browser of the bot this person's view shows (`threadId` names the conversation they look at); null when
    * they may not see that conversation. */
   audience(auth: RequestAuth, threadId: string | null): Audience | null;
@@ -104,7 +106,8 @@ export function createBrowserViewerRoutes(deps: BrowserViewerRouteDeps): RouteHa
     const stream = live ? null : STREAM.exec(path);
     const upload = live || stream ? null : UPLOAD.exec(path);
     const download = live || stream || upload ? null : DOWNLOAD.exec(path);
-    const botId = (live ?? stream ?? upload ?? download)?.[1];
+    const demo = live || stream || upload || download ? null : DEMO.exec(path);
+    const botId = (live ?? stream ?? upload ?? download ?? demo)?.[1];
     if (!botId) return PASS;
     res.setHeader("cache-control", "no-store");
     const pending = stream ? deps.upgrades.pending(req) : undefined;
@@ -153,6 +156,17 @@ export function createBrowserViewerRoutes(deps: BrowserViewerRouteDeps): RouteHa
       if (!opened) return json(res, 409, { error: "This browser shows in the live view only." });
       res.detachSocket(pending.socket);
       return;
+    }
+
+    if (demo) {
+      const body = method === "POST" ? await readBody(req, 4_096) : null;
+      if (method === "POST" && !isCurrent()) return json(res, 409, { error: "This browser session changed. Reopen the browser panel." });
+      const reply = demoRoute(method, body, {
+        startDemo: () => deps.viewers.startDemo(browser),
+        demo: () => deps.viewers.demo(browser),
+        stopDemo: () => deps.viewers.stopDemo(browser),
+      }, { dataDir: deps.dataDir, botId: browser.botId });
+      return json(res, reply.status, reply.body);
     }
 
     if (upload) {

@@ -19,6 +19,7 @@ import type { Backend, OpenedBrowser } from "./backends.ts";
 import type { CdpBrowser } from "./cdp/browser.ts";
 import type { Download } from "./cdp/downloads.ts";
 import { isUnanswered } from "./cdp/errors.ts";
+import { DemoRecorder, type DemoStep } from "./demo-recorder.ts";
 import type { CdpPage } from "./cdp/page.ts";
 import { browserRoot, profileDir, profileHash, profileKind, removeProfile, workspaceId } from "./chrome/profile.ts";
 import { BROWSER_CONTROL_REFUSAL, ProfileControl, type TakeResult } from "./control.ts";
@@ -591,6 +592,27 @@ export class BrowserService {
   async attachViewer(target: BrowserTarget, options: ViewerOptions, push: (output: ViewerOutput) => void): Promise<Viewer> {
     const profile = this.profile(target);
     return profile.hub.attach(options, push);
+  }
+
+  /** Starts recording what the person does in this browser, to teach a task; false when the browser is not open. */
+  startDemo(session: string): boolean {
+    const profile = this.#bySession(session);
+    if (!profile?.run) return false;
+    profile.hub.recorder = new DemoRecorder();
+    return true;
+  }
+
+  demo(session: string): { steps: DemoStep[]; truncated: boolean } | null {
+    const recorder = this.#bySession(session)?.hub.recorder;
+    return recorder ? { steps: recorder.steps(), truncated: recorder.truncated } : null;
+  }
+
+  stopDemo(session: string): { steps: DemoStep[]; truncated: boolean } | null {
+    const profile = this.#bySession(session);
+    const recorder = profile?.hub.recorder;
+    if (!profile || !recorder) return null;
+    profile.hub.recorder = null;
+    return { steps: recorder.steps(), truncated: recorder.truncated };
   }
 
   heldBy(session: string): string | null {

@@ -299,6 +299,19 @@ export class LiveRouter {
     return chromeTarget(session, spec) ? this.#chrome.service.download(session, id) : undefined;
   }
 
+  /** Teaching a task records the person's inputs on the new engine only; null elsewhere. */
+  startDemo({ session, spec }: SessionSpec): boolean | null {
+    return chromeTarget(session, spec) ? this.#chrome.service.startDemo(session) : null;
+  }
+
+  demo({ session, spec }: SessionSpec): ReturnType<BrowserService["demo"]> {
+    return chromeTarget(session, spec) ? this.#chrome.service.demo(session) : null;
+  }
+
+  stopDemo({ session, spec }: SessionSpec): ReturnType<BrowserService["stopDemo"]> {
+    return chromeTarget(session, spec) ? this.#chrome.service.stopDemo(session) : null;
+  }
+
   handBack(session: string): void { this.#chrome.live.handBack(session); this.#old.handBack(session); }
   closeForSession(session: string): void { this.#chrome.live.closeForSession(session); this.#chrome.stream.closeForSession(session); this.#old.closeForSession(session); }
   closeForOwner(owner: string): void { this.#chrome.live.closeForOwner(owner); this.#chrome.stream.closeForOwner(owner); this.#old.closeForOwner(owner); }

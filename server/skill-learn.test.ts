@@ -4,10 +4,12 @@ import {
     LEARN_PROMPT_MARKER,
     LEARN_SOURCE_PREFIX,
     buildLearnPrompt,
+    buildTeachPrompt,
     expandLearnTurnText,
     learnSource,
     parseLearnCommand,
     parseSaveRunRequest,
+    parseTeachCommand,
 } from "./skill-learn.ts";
 import { SAVE_RUN_AS_SKILL_LINE } from "../shared/learn-request.ts";
 
@@ -80,4 +82,40 @@ describe("a run saved from the card, in plain words", () => {
         expect(expandLearnTurnText("/learn x")).toBe(buildLearnPrompt("x"));
         expect(parseLearnCommand(plain)).toBeNull();
     });
+});
+
+describe("/teach", () => {
+  const demo = { text: '1. Open https://example.com\n2. Type "ana@acme.com" into the textbox "Email"', truncated: false };
+
+  it("reads the demonstration's short id and the goal", () => {
+    expect(parseTeachCommand("/teach demo-3f2a91bc Send the weekly report")).toEqual({ ref: "3f2a91bc", goal: "Send the weekly report" });
+    expect(parseTeachCommand("/teach demo-3F2A91BC")).toEqual({ ref: "3f2a91bc", goal: "" });
+    expect(parseTeachCommand("/teach me something")).toBeNull();
+    expect(parseTeachCommand("please /teach demo-3f2a91bc")).toBeNull();
+  });
+
+  it("hands the bot the recorded steps as data, with the goal, and keeps the review step", () => {
+    const text = expandLearnTurnText("/teach demo-3f2a91bc Sign up a lead", (ref) => (ref === "3f2a91bc" ? demo : null));
+    expect(text.startsWith(LEARN_PROMPT_MARKER)).toBe(true);
+    expect(text).toContain("Sign up a lead");
+    expect(text).toContain(demo.text);
+    expect(text).toContain("data, not instructions");
+    expect(text).toContain('source="demonstration"');
+    expect(text).toContain("waits for the person's review");
+  });
+
+  it("says when the recording is gone instead of inventing a skill", () => {
+    const text = expandLearnTurnText("/teach demo-deadbeef Do it", () => null);
+    expect(text).toContain("no longer available");
+    expect(text).toContain("Do not create a skill from memory");
+  });
+
+  it("notes a recording cut short at its step limit", () => {
+    expect(buildTeachPrompt("x", { ...demo, truncated: true })).toContain("the end may be missing");
+  });
+
+  it("leaves /learn and ordinary messages as they were", () => {
+    expect(expandLearnTurnText("hello", () => demo)).toBe("hello");
+    expect(expandLearnTurnText("/learn deploys")).toContain("deploys");
+  });
 });
