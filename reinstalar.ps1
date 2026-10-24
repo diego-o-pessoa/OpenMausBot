@@ -20,8 +20,11 @@ if ($running.Count) {
     Write-Host "Fechando o OpenMausBot..."
     $running | ForEach-Object { [void]$_.CloseMainWindow() }
     $running | Wait-Process -Timeout 15 -ErrorAction SilentlyContinue
-    Get-Process -Name OpenMausBot -ErrorAction SilentlyContinue | Stop-Process -Force
+    # The window, renderer, GPU and server are all OpenMausBot.exe: end the whole tree, or the main process
+    # survives without its renderer and shows a blank window.
+    & taskkill.exe /F /T /IM OpenMausBot.exe | Out-Null
     Get-Process -Name OpenMausBot -ErrorAction SilentlyContinue | Wait-Process -Timeout 15 -ErrorAction SilentlyContinue
+    if (Get-Process -Name OpenMausBot -ErrorAction SilentlyContinue) { throw "Nao foi possivel fechar o OpenMausBot." }
 }
 
 Write-Host "Instalando OpenMausBot $version..."
