@@ -158,6 +158,15 @@ Mais recente primeiro. Modelo de entrada:
 - **Como verificar:** comando ou passo usado.
 ```
 
+### 2026-10-24 — Instalador para Linux (sem Docker)
+- **O quê:** `instalar-linux.sh` instala ou atualiza este fork numa máquina Linux sem Docker (feito para a área de
+  trabalho Ubuntu em contêiner que é usada pelo navegador): instala o Node 24 via nvm (sem root), clona/atualiza o
+  fork em `~/OpenMausBot`, compila servidor e interface, gera o pacote npm e instala o comando `openmausbot`, além
+  dos CLIs de IA (`@anthropic-ai/claude-code`, `@openai/codex`). Uso:
+  `curl -fsSL https://raw.githubusercontent.com/diego-o-pessoa/OpenMausBot/main/instalar-linux.sh | bash`, depois `openmausbot`.
+- **Onde:** `instalar-linux.sh`, `.gitattributes` (força LF).
+- **Como verificar:** `bash -n instalar-linux.sh`. Ainda não testado numa máquina Linux real.
+
 ### 2026-10-24 — Ensinar tarefas (etapas 1 a 5)
 - **O quê:** no painel do navegador do bot, menu **⋮ → Ensinar uma tarefa…** grava o que a pessoa faz
   (cliques, digitação, escolhas em listas, navegação) como passos com o nome de cada elemento. Senhas e o
