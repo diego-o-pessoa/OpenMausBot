@@ -45,6 +45,13 @@ permanent version is:
 pnpm exec vitest run server/workspace-backup-workflow.test.ts --silent=false
 ```
 
+## Sync from another computer
+
+[Sync from another computer](../workspace-sync.md) pulls the same backup over a
+paired session and restores it. Its two-server recipe is
+`node --experimental-strip-types scripts/verify-workspace-sync.ts`, kept as
+`server/workspace-sync-workflow.test.ts`.
+
 ## Additional checks
 
 Export worker behavior and repeatable latency measurements are documented in

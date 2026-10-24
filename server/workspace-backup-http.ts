@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream, existsSync, lstatSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { join } from "node:path";
@@ -13,6 +13,7 @@ import {
   type WorkspaceBackupSummary,
 } from "./workspace-backup.ts";
 import type { RequestAuth } from "./request-auth.ts";
+import { downloadSourceBackup, forgetWorkspaceSource, pairWorkspaceSource, readWorkspaceSource, sourceView } from "./workspace-source.ts";
 
 const PREFIX = "/api/workspace-backup";
 const MAX_UPLOAD_BYTES = MAX_WORKSPACE_BACKUP_UPLOAD_BYTES;
@@ -38,6 +39,9 @@ export function createWorkspaceBackupRoutes(options: {
   authorized: (req: IncomingMessage, auth: RequestAuth) => boolean;
   status: () => { busy: boolean; pendingRestore: boolean };
   restored: RestoreResult;
+  /** How this computer names itself in the source computer's list of paired devices. */
+  sourceLabel?: string;
+  fetch?: typeof fetch;
 }) {
   const artifacts = new Map<string, Artifact>();
   let operating = false;
@@ -90,6 +94,15 @@ export function createWorkspaceBackupRoutes(options: {
     }
     return artifact;
   };
+  function uploadsDirectory(): string {
+    const root = join(options.dataDir, ".backups");
+    mkdirSync(root, { recursive: true, mode: 0o700 });
+    if (lstatSync(root).isSymbolicLink()) throw failure("Backup storage must not be a symbolic link.");
+    const directory = join(root, "uploads");
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    if (lstatSync(directory).isSymbolicLink()) throw failure("Backup storage must not be a symbolic link.");
+    return directory;
+  }
   async function operate<T>(work: () => Promise<T>): Promise<T> {
     if (operating) throw failure("Another backup operation is in progress. Wait for it to finish.", 409);
     operating = true;
@@ -150,14 +163,8 @@ export function createWorkspaceBackupRoutes(options: {
           if (!Number.isSafeInteger(length) || length <= 0 || length > MAX_UPLOAD_BYTES) throw failure("Select a backup containing no more than 10 GB of workspace data.", 413);
           replacePrevious(auth, ["upload", "staged"]);
           if (artifacts.size >= 4) throw failure("There are already four backup files in progress. Restart or wait an hour before uploading another.", 409);
-          const root = join(options.dataDir, ".backups");
-          mkdirSync(root, { recursive: true, mode: 0o700 });
-          if (lstatSync(root).isSymbolicLink()) throw failure("Backup storage must not be a symbolic link.");
-          const directory = join(root, "uploads");
-          mkdirSync(directory, { recursive: true, mode: 0o700 });
-          if (lstatSync(directory).isSymbolicLink()) throw failure("Backup storage must not be a symbolic link.");
           const id = randomUUID();
-          const file = join(directory, `${id}.ombbackup`);
+          const file = join(uploadsDirectory(), `${id}.ombbackup`);
           let bytes = 0;
           try {
             const limit = new Transform({ transform(chunk, _encoding, callback) {
@@ -171,6 +178,45 @@ export function createWorkspaceBackupRoutes(options: {
             json(res, 200, { id });
           } catch (error) { try { unlinkSync(file); } catch {} throw error; }
         });
+        return true;
+      }
+      if (method === "GET" && path === `${PREFIX}/source`) {
+        json(res, 200, { source: sourceView(readWorkspaceSource(options.dataDir)) });
+        return true;
+      }
+      if (method === "POST" && path === `${PREFIX}/source`) {
+        const body = z.object({ address: z.string().min(1).max(2048), code: z.string().max(64).default("") }).parse(await options.readBody(req));
+        const source = await operate(() => pairWorkspaceSource({
+          dataDir: options.dataDir, address: body.address, code: body.code,
+          label: options.sourceLabel ?? "OpenMausBot sync", fetch: options.fetch,
+        }));
+        json(res, 200, { source: sourceView(source) });
+        return true;
+      }
+      if (method === "DELETE" && path === `${PREFIX}/source`) {
+        await operate(() => forgetWorkspaceSource(options.dataDir, options.fetch));
+        json(res, 200, { source: null });
+        return true;
+      }
+      if (method === "POST" && path === `${PREFIX}/pull`) {
+        const source = readWorkspaceSource(options.dataDir);
+        if (!source) throw failure("Connect to the other computer first.", 409);
+        const result = await operate(async () => {
+          replacePrevious(auth, ["upload", "staged"]);
+          if (artifacts.size >= 4) throw failure("There are already four backup files in progress. Restart or wait an hour before syncing.", 409);
+          const password = randomBytes(24).toString("base64url");
+          const file = join(uploadsDirectory(), `${randomUUID()}.ombbackup`);
+          try {
+            await downloadSourceBackup({ source, password, destination: file, maxBytes: MAX_UPLOAD_BYTES, fetch: options.fetch });
+            check(req, auth);
+            return await stageWorkspaceBackup(options.dataDir, file, { password, currentAppVersion: options.appVersion });
+          } finally {
+            try { unlinkSync(file); } catch {}
+          }
+        });
+        try { check(req, auth); } catch (error) { removeWorkspaceBackupJob(options.dataDir, result.id); throw error; }
+        artifacts.set(result.id, { owner: owner(auth), kind: "staged", summary: result.summary, expires: Date.now() + EXPIRES_MS });
+        json(res, 200, { id: result.id, summary: result.summary, source: sourceView(source) });
         return true;
       }
       if (method === "POST" && path === `${PREFIX}/preview`) {

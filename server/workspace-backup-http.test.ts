@@ -1,6 +1,6 @@
 // Archive work is mocked so revocation can be held at a deterministic boundary.
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, request, type IncomingMessage, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -25,6 +25,7 @@ let url: string;
 let sessions: SessionRegistry;
 let maintenance: WorkspaceBackupMaintenance;
 let admin: ReturnType<SessionRegistry["issue"]>;
+let remoteFetch: typeof fetch;
 
 function fakeArchive() {
   const id = randomUUID();
@@ -48,7 +49,7 @@ beforeEach(async () => {
   archive.remove.mockImplementation((_dataDir: string, id: string) => rmSync(join(dataDir, ".backups", id), { recursive: true, force: true }));
   const authenticate = (req: IncomingMessage) => resolveRequestAuth(req, { sessions, cookieName: "fixture", streamPath: "/api/events", url: new URL(req.url!, url) });
   const routes = createWorkspaceBackupRoutes({
-    dataDir, appVersion: "0.1.71", restored: {},
+    dataDir, appVersion: "0.1.71", restored: {}, fetch: (input, init) => remoteFetch(input, init),
     readBody: async (req, limit = 1_000_000) => {
       const chunks: Buffer[] = [];
       let bytes = 0;
@@ -161,4 +162,40 @@ it("accepts drafts between 1 and 2 MiB and enforces the preference cap in UTF-8 
   expect((await rejected.json() as { error: string }).error).toContain("2 MB backup preference limit");
   expect(archive.create).toHaveBeenCalledOnce();
   expect(readdirSync(join(dataDir, ".backups"))).toHaveLength(1);
+});
+
+it("pulls a fresh backup from the paired computer and stages it for the usual restore", async () => {
+  const remoteToken = `omb_sess_${"r".repeat(43)}`;
+  const calls: string[] = [];
+  remoteFetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const target = String(input);
+    calls.push(`${init?.method ?? "GET"} ${target} ${new Headers(init?.headers).get("authorization")}`);
+    if (target.endsWith("/api/workspace-backup/export")) return Response.json({ id: "remote-backup" });
+    if (target.endsWith("/api/workspace-backup/download/remote-backup")) return new Response("pulled encrypted bytes", { headers: { "content-length": "22" } });
+    return Response.json({ error: "not found" }, { status: 404 });
+  }) as typeof fetch;
+  expect((await post("/api/workspace-backup/pull", {})).status).toBe(409);
+  writeFileSync(join(dataDir, "workspace-source.json"), JSON.stringify({ address: "http://127.0.0.1:18799", token: remoteToken, pairedAt: "2026-10-24T00:00:00Z" }));
+  expect(await fetch(`${url}/api/workspace-backup/source`, { headers: { authorization: `Bearer ${admin.token}` } }).then((response) => response.json()))
+    .toEqual({ source: { address: "http://127.0.0.1:18799", pairedAt: "2026-10-24T00:00:00Z" } });
+
+  let pulled: { bytes: string; password: string } | null = null;
+  archive.stage.mockImplementationOnce(async (_dataDir: string, file: string, options: { password: string }) => {
+    pulled = { bytes: readFileSync(file, "utf8"), password: options.password };
+    return fakeArchive();
+  });
+  const member = sessions.issue({ label: "Fixture member", scopes: ["client"] });
+  expect((await post("/api/workspace-backup/pull", {}, member.token)).status).toBe(403);
+  const response = await post("/api/workspace-backup/pull", {});
+  expect(response.status).toBe(200);
+  const staged = await response.json() as { id: string; source: { address: string } };
+  expect(staged.source.address).toBe("http://127.0.0.1:18799");
+  expect(pulled).toEqual({ bytes: "pulled encrypted bytes", password: expect.stringMatching(/^[\w-]{32}$/) });
+  expect(calls).toEqual([
+    `POST http://127.0.0.1:18799/api/workspace-backup/export Bearer ${remoteToken}`,
+    `GET http://127.0.0.1:18799/api/workspace-backup/download/remote-backup Bearer ${remoteToken}`,
+  ]);
+  expect(readdirSync(join(dataDir, ".backups", "uploads"))).toEqual([]);
+  expect((await post("/api/workspace-backup/restore", { id: staged.id, confirmation: "REPLACE" })).status).toBe(200);
+  expect(archive.commit).toHaveBeenCalledWith(dataDir, staged.id);
 });
