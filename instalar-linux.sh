@@ -69,8 +69,16 @@ info "Instalando as dependências (alguns minutos)"
 ELECTRON_SKIP_BINARY_DOWNLOAD=1 OMB_SKIP_HOOKS=1 pnpm install --frozen-lockfile
 
 info "Compilando o servidor e a interface (alguns minutos)"
+# Node's default heap is too small for the UI build; OMB_BUILD_MEMORY_MB raises or lowers what it may use.
+BUILD_MB="${OMB_BUILD_MEMORY_MB:-4096}"
+free_mb="$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)"
+if [ "$free_mb" -gt 0 ] && [ "$free_mb" -lt "$BUILD_MB" ]; then
+  warn "há só ${free_mb} MB de memória livre; a compilação pede até ${BUILD_MB} MB. Feche outros programas, ou rode de novo com OMB_BUILD_MEMORY_MB=$((free_mb - 256))."
+fi
+export NODE_OPTIONS="--max-old-space-size=$BUILD_MB"
 pnpm build:server
 pnpm exec vite build
+unset NODE_OPTIONS
 node scripts/build-npm-package.mjs
 
 info "Instalando o comando openmausbot"
