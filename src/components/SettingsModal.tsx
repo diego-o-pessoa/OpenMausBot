@@ -50,6 +50,7 @@ import { AutomaticRecoverySettings } from "./AutomaticRecoverySettings";
 import { ThreadCleanupSettings } from "./ThreadCleanupSettings";
 import { DefaultBotSettings } from "./NewBotDialog";
 import { WorkspaceBackupSettings } from "./WorkspaceBackupSettings";
+import { WorkspaceSourceSettings } from "./WorkspaceSourceSettings";
 import { CompanyBackupSettings } from "./CompanyBackupSettings";
 import { ImportSettings } from "./ImportSettings";
 import { cn } from "@/lib/cn";
@@ -762,7 +763,7 @@ export function SettingsModal() {
         );
       case "decisionModel": return <DecisionModelSettings />;
       case "engines": return <EnginesSettings />;
-      case "backups": return <><WorkspaceBackupSettings /><CompanyBackupSettings /></>;
+      case "backups": return <><WorkspaceBackupSettings /><WorkspaceSourceSettings /><CompanyBackupSettings /></>;
       case "import": return <ImportSettings />;
       case "companion": {
         const phoneFocus = state.appSettingsPhonePairing;

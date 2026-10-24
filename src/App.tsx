@@ -46,7 +46,9 @@ import { engineReady } from "@/components/EngineLibrary";
 import { CommandPalette } from "@/components/CommandPalette";
 import { setLocale, t } from "@/lib/i18n";
 import { shouldOpenKeyboardShortcuts } from "@/lib/keyboard-shortcuts";
-import { effectiveLanguage, useLanguageChoice } from "@/lib/language-preference";
+import { effectiveLanguage, languageToSave, useLanguageChoice } from "@/lib/language-preference";
+import { ownDesktopPage } from "@/lib/desktop";
+import { api } from "@/state/api";
 import { botShowsUnread } from "@/lib/bot-unread";
 import { phonePairingSettingsAction, takePhonePairingRequest } from "@/lib/phone-pairing"; import { takeConnectRequest } from "@/lib/connect-link";
 import { useExternalChatLinks } from "@/hooks/use-external-chat-links";
@@ -106,7 +108,13 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   }, [dispatch]);
   useExternalChatLinks(state, dispatch);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const language = effectiveLanguage(useLanguageChoice(), state.config?.language);
+  const languageChoice = useLanguageChoice();
+  const language = effectiveLanguage(languageChoice, state.config?.language);
+  const savedLanguage = state.config ? state.config.language ?? "" : undefined;
+  useEffect(() => {
+    const pending = languageToSave(languageChoice, savedLanguage, ownDesktopPage());
+    if (pending !== null) void api("/api/config", { method: "PUT", body: JSON.stringify({ language: pending }), background: true }).catch(() => {});
+  }, [languageChoice, savedLanguage]);
   const [, setLocaleEpoch] = useState(0);
   useEffect(() => {
     setLocale(language || globalThis.navigator?.language);

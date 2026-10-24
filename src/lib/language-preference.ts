@@ -61,6 +61,11 @@ export function setLanguageChoice(language: string): void {
   notify();
 }
 
+export function languageToSave(choice: string | null, saved: string | undefined, ownComputer: boolean): string | null {
+  if (!ownComputer || choice === null || saved === undefined) return null;
+  return choice === saved ? null : choice;
+}
+
 export function useLanguageChoice(): string | null {
   return useSyncExternalStore(subscribe, languageChoice, () => null);
 }

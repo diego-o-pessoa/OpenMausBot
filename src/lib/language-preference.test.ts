@@ -102,3 +102,20 @@ describe("app language preference", () => {
     expect(preference.languageChoice()).toBe("uk");
   });
 });
+
+describe("languageToSave", () => {
+  it("saves this window's choice to the desktop's own settings until they match", async () => {
+    const { languageToSave } = await import("./language-preference");
+    expect(languageToSave("pt-br", "", true)).toBe("pt-br");
+    expect(languageToSave("pt-br", "en", true)).toBe("pt-br");
+    expect(languageToSave("", "pt-br", true)).toBe("");
+    expect(languageToSave("pt-br", "pt-br", true)).toBeNull();
+  });
+
+  it("saves nothing without a choice, before the settings load, or on another computer's page", async () => {
+    const { languageToSave } = await import("./language-preference");
+    expect(languageToSave(null, "en", true)).toBeNull();
+    expect(languageToSave("pt-br", undefined, true)).toBeNull();
+    expect(languageToSave("pt-br", "en", false)).toBeNull();
+  });
+});

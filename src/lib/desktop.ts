@@ -76,3 +76,8 @@ export function cacheDesktopCapabilities(capabilities: DesktopCapabilities): Des
   cached = capabilities;
   return capabilities;
 }
+
+export function ownDesktopPage(): boolean {
+  const client = typeof window === "undefined" ? undefined : window.ogb?.remoteClient;
+  return client !== undefined && client.active !== true;
+}
