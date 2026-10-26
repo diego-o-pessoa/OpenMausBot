@@ -39,6 +39,17 @@ if ($running.Count) {
     if (Get-Process -Name OpenMausBot -ErrorAction SilentlyContinue) { throw "Nao foi possivel fechar o OpenMausBot." }
 }
 
+$dados = Join-Path $env:USERPROFILE ".openmausbot"
+if (Test-Path -LiteralPath $dados) {
+    $backups = Join-Path $env:USERPROFILE "OpenMausBot-backups"
+    $destino = Join-Path $backups (Get-Date -Format "yyyy-MM-dd_HHmmss")
+    Write-Host "Backup dos agentes em $destino..."
+    & robocopy.exe $dados $destino /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+    # robocopy: 0-7 is success, 8 or more is failure.
+    if ($LASTEXITCODE -ge 8) { throw "O backup falhou (robocopy $LASTEXITCODE). Nada foi instalado." }
+    Get-ChildItem -LiteralPath $backups -Directory | Sort-Object Name -Descending | Select-Object -Skip 5 | Remove-Item -Recurse -Force
+}
+
 Write-Host "Instalando OpenMausBot $version..."
 $setup = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
 if ($setup.ExitCode -ne 0) { throw "O instalador terminou com codigo $($setup.ExitCode)." }

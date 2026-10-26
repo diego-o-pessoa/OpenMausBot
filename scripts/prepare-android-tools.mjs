@@ -15,6 +15,7 @@ if (!platform || !archive) throw new Error(`Android Platform Tools are unsupport
 
 const finalDir = join(root, "dist-native", "android-platform-tools", platform);
 const override = process.env.OMB_ANDROID_PLATFORM_TOOLS_SOURCE;
+const adbName = process.platform === "win32" ? "adb.exe" : "adb";
 const temporary = mkdtempSync(join(tmpdir(), "openmaus-android-tools-"));
 const staged = join(temporary, platform);
 
@@ -26,8 +27,17 @@ try {
     cpSync(override, staged, { recursive: true });
   } else {
     const url = `https://dl.google.com/android/repository/platform-tools-latest-${archive}.zip`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`could not download Android Platform Tools: HTTP ${response.status}`);
+    let response;
+    try {
+      response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      // An offline or flaky network must not fail a rebuild that already staged the same tools.
+      if (!existsSync(join(finalDir, adbName))) throw new Error(`could not download Android Platform Tools: ${error.cause?.message ?? error.message}`);
+      console.warn(`could not download Android Platform Tools (${error.cause?.message ?? error.message}); reusing the copy already staged at ${finalDir}`);
+      rmSync(temporary, { recursive: true, force: true });
+      process.exit(0);
+    }
     const zip = join(temporary, basename(new URL(url).pathname));
     writeFileSync(zip, Buffer.from(await response.arrayBuffer()));
     const extraction = join(temporary, "extracted");
