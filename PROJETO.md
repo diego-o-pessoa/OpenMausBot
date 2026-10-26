@@ -101,8 +101,9 @@ Checagens: `pnpm typecheck`, `pnpm lint`, `pnpm test` (suíte longa, roda arquiv
 
 ### Depois de toda mudança: compilar e reinstalar
 
-Combinado: depois de **qualquer** mudança, compilar, fechar o app se estiver aberto, instalar a versão nova
-e abrir o app de novo. O script `reinstalar.ps1` faz tudo:
+Combinado: depois de **qualquer** mudança, fazer commit e push e esperar o OK para reinstalar. Reinstalar é
+compilar, fechar o app se estiver aberto, instalar a versão nova e abrir o app de novo. O script
+`reinstalar.ps1` faz tudo (e antes de instalar copia `~/.openmausbot` para `~/OpenMausBot-backups`):
 
 ```powershell
 .\reinstalar.ps1            # build (pnpm package:win) + fecha + instala em silêncio + abre
