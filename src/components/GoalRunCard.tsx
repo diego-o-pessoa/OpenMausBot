@@ -8,23 +8,26 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/cn";
+import { t } from "@/lib/i18n";
+import { translateServerMessage } from "@/lib/server-messages";
+import type { LocaleKey } from "@/locales";
 import type { Message } from "@/state/store";
 import type { GroupGoalRunCardData } from "../../shared/group-goal-run";
 
 const DETAIL_LIMIT = 280;
 
 const COPY = {
-  working: { label: "Working", tone: "text-accent", border: "border-accent/30" },
-  completed: { label: "Completed", tone: "text-success", border: "border-success/30" },
-  "needs-input": { label: "Needs your input", tone: "text-warning", border: "border-warning/35" },
-  blocked: { label: "Blocked", tone: "text-warning", border: "border-warning/35" },
-  "limit-reached": { label: "Turn limit reached", tone: "text-warning", border: "border-warning/35" },
-  paused: { label: "Paused", tone: "text-warning", border: "border-warning/35" },
-  stopped: { label: "Stopped", tone: "text-ink-secondary", border: "border-hairline/45" },
-  failed: { label: "Failed", tone: "text-danger", border: "border-danger/35" },
+  working: { label: "runCard.working", tone: "text-accent", border: "border-accent/30" },
+  completed: { label: "runCard.completed", tone: "text-success", border: "border-success/30" },
+  "needs-input": { label: "runCard.needsInput", tone: "text-warning", border: "border-warning/35" },
+  blocked: { label: "runCard.blocked", tone: "text-warning", border: "border-warning/35" },
+  "limit-reached": { label: "runCard.limitReached", tone: "text-warning", border: "border-warning/35" },
+  paused: { label: "runCard.paused", tone: "text-warning", border: "border-warning/35" },
+  stopped: { label: "runCard.stopped", tone: "text-ink-secondary", border: "border-hairline/45" },
+  failed: { label: "runCard.failed", tone: "text-danger", border: "border-danger/35" },
 } satisfies Record<
   GroupGoalRunCardData["status"],
-  { label: string; tone: string; border: string }
+  { label: LocaleKey; tone: string; border: string }
 >;
 
 function compact(value: string | undefined, limit: number): string {
@@ -63,16 +66,16 @@ export function GoalRunCard({ message }: { message: Message }) {
     ) : null;
   }
 
-  const copy = COPY[run.status];
+  const copy = { ...COPY[run.status], label: t(COPY[run.status].label) };
   const goal = compact(run.goal, 180);
-  const detail = compact(run.detail, DETAIL_LIMIT);
+  const detail = compact(run.detail && translateServerMessage(run.detail), DETAIL_LIMIT);
   const turns = run.status === "working"
-    ? `Turn ${Math.min(run.turnCount + 1, run.maxTurns)} of ${run.maxTurns}`
-    : `${run.turnCount} ${run.turnCount === 1 ? "turn" : "turns"}`;
+    ? t("goalCard.turnOf", { turn: Math.min(run.turnCount + 1, run.maxTurns), max: run.maxTurns })
+    : run.turnCount === 1 ? t("goalCard.turnOne") : t("goalCard.turns", { count: run.turnCount });
 
   return (
     <section
-      aria-label={`Goal run: ${copy.label}`}
+      aria-label={t("goalCard.aria", { status: copy.label })}
       className={cn("w-full max-w-[680px] rounded-2xl border bg-card px-3.5 py-3 shadow-sm", copy.border)}
     >
       <div className="flex items-start gap-3">
@@ -81,14 +84,14 @@ export function GoalRunCard({ message }: { message: Message }) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <h3 className="truncate text-[13.5px] font-semibold text-ink">{goal || "Group goal"}</h3>
+            <h3 className="truncate text-[13.5px] font-semibold text-ink">{goal || t("goalCard.untitled")}</h3>
             <span aria-live="polite" className={cn("text-[11.5px] font-medium", copy.tone)}>
               {copy.label}
             </span>
           </div>
           {detail && <p className="mt-1 line-clamp-2 text-[12.5px] leading-relaxed text-ink-secondary">{detail}</p>}
           <p className="mt-1 text-[11.5px] text-ink-tertiary">
-            {run.coordinatorName} coordinating · {turns}
+            {t("goalCard.coordinating", { name: run.coordinatorName })} · {turns}
           </p>
         </div>
       </div>

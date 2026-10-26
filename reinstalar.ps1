@@ -35,7 +35,12 @@ if ($running.Count) {
     # The window, renderer, GPU and server are all OpenMausBot.exe: end the whole tree, or the main process
     # survives without its renderer and shows a blank window.
     & taskkill.exe /F /T /IM OpenMausBot.exe | Out-Null
-    Get-Process -Name OpenMausBot -ErrorAction SilentlyContinue | Wait-Process -Timeout 15 -ErrorAction SilentlyContinue
+    # On a busy machine the process tree can take well over 15 s to exit after taskkill.
+    $deadline = (Get-Date).AddSeconds(60)
+    while ((Get-Process -Name OpenMausBot -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) {
+        & taskkill.exe /F /T /IM OpenMausBot.exe 2>$null | Out-Null
+        Start-Sleep -Seconds 1
+    }
     if (Get-Process -Name OpenMausBot -ErrorAction SilentlyContinue) { throw "Nao foi possivel fechar o OpenMausBot." }
 }
 
