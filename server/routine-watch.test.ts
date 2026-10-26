@@ -44,10 +44,10 @@ describe("tomticketFingerprint", () => {
 
 describe("routineWatchChecker", () => {
   it("lets the routine run unwatched when no token is configured", async () => {
-    await expect(routineWatchChecker({}, respond({ error: false, data: [] }))({ kind: "tomticket" })).resolves.toBeNull();
+    await expect(routineWatchChecker(() => undefined, respond({ error: false, data: [] }))({ kind: "tomticket" })).resolves.toBeNull();
   });
 
-  it("reads the token from OMB_TOMTICKET_TOKEN", async () => {
-    await expect(routineWatchChecker({ OMB_TOMTICKET_TOKEN: "t" }, respond({ error: false, data: [] }))({ kind: "tomticket" })).resolves.toBe("");
+  it("reads the token saved in Settings at check time", async () => {
+    await expect(routineWatchChecker(() => "t", respond({ error: false, data: [] }))({ kind: "tomticket" })).resolves.toBe("");
   });
 });

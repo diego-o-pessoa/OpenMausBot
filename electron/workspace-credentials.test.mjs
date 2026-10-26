@@ -19,6 +19,7 @@ describe("workspace credential migration", () => {
   it("moves every plaintext secret into the store and deletes the field", () => {
     const config = {
       xai: { key: "xai-secret", url: "https://api.example.test/v1" },
+      tomticket: { key: "tomticket-secret" },
       box: { token: "boat-secret" },
       tts: { key: "tts-secret", fishKey: "fish-secret", voice: "narrator" },
       imageGen: { key: "image-secret" },
@@ -30,6 +31,7 @@ describe("workspace credential migration", () => {
     expect(result.credentialsChanged).toBe(true);
     expect(result.credentials).toEqual({
       xaiApiKey: "xai-secret",
+      tomticketToken: "tomticket-secret",
       boxToken: "boat-secret",
       ttsKey: "tts-secret",
       fishAudioKey: "fish-secret",
@@ -38,6 +40,7 @@ describe("workspace credential migration", () => {
     });
     expect(result.config).toEqual({
       xai: { url: "https://api.example.test/v1" },
+      tomticket: {},
       box: {},
       tts: { voice: "narrator" },
       imageGen: {},
@@ -127,6 +130,7 @@ describe("workspace credential env", () => {
     expect(
       workspaceCredentialEnv({
         xaiApiKey: "xai-secret",
+        tomticketToken: "tomticket-secret",
         boxToken: "boat-secret",
         ttsKey: "tts-secret",
         fishAudioKey: "fish-secret",
@@ -136,6 +140,7 @@ describe("workspace credential env", () => {
       }),
     ).toEqual({
       XAI_API_KEY: "xai-secret",
+      OMB_TOMTICKET_TOKEN: "tomticket-secret",
       BOX_TOKEN: "boat-secret",
       OMB_TTS_KEY: "tts-secret",
       OMB_FISH_AUDIO_API_KEY: "fish-secret",

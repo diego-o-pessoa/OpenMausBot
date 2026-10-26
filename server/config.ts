@@ -336,6 +336,7 @@ const appConfigSchema = z.object({
   }).optional(),
   mistral: z.object({ key: optionalText }).optional(),
   cerebras: z.object({ key: optionalText }).optional(), treg: z.object({ key: optionalText }).optional(),
+  tomticket: z.object({ key: optionalText }).optional(),
   groq: z.object({ key: optionalText, url: optionalText }).optional(),
   meta: z.object({ key: optionalText, url: optionalText }).optional(),
   xai: z.object({ key: optionalText, url: optionalText }).optional(),
@@ -484,6 +485,8 @@ export interface AppConfig extends HelperConfig {
   xai?: { key?: string; url?: string };
   mistral?: { key?: string };
   cerebras?: { key?: string }; treg?: { key?: string };
+  /** The TomTicket API token routine watches read; write-only like every key. */
+  tomticket?: { key?: string };
   groq?: { key?: string; url?: string };
   meta?: { key?: string; url?: string };
   /** `everyClaudeBot`: the key runs every Claude bot instead of its login; unset means true. */
@@ -784,6 +787,7 @@ export function loadConfig(): AppConfig {
   cfg.cerebras = { ...cfg.cerebras };
   if (process.env.CEREBRAS_API_KEY !== undefined) cfg.cerebras.key = process.env.CEREBRAS_API_KEY;
   if (process.env.OMB_TREG_KEY !== undefined) cfg.treg = { ...cfg.treg, key: process.env.OMB_TREG_KEY };
+  if (process.env.OMB_TOMTICKET_TOKEN !== undefined) cfg.tomticket = { ...cfg.tomticket, key: process.env.OMB_TOMTICKET_TOKEN };
   cfg.groq = { ...cfg.groq };
   if (process.env.OMB_GROQ_API_KEY !== undefined) cfg.groq.key = process.env.OMB_GROQ_API_KEY;
   cfg.meta = { ...cfg.meta };
@@ -853,7 +857,7 @@ export function syncCredentialEnv(patch: Partial<Omit<AppConfig, "threads" | "ne
   const secrets: Array<[value: string | undefined, name: string]> = [
     [patch.xai?.key, "XAI_API_KEY"],
     [patch.mistral?.key, "MISTRAL_API_KEY"],
-    [patch.cerebras?.key, "CEREBRAS_API_KEY"], [patch.treg?.key, "OMB_TREG_KEY"],
+    [patch.cerebras?.key, "CEREBRAS_API_KEY"], [patch.treg?.key, "OMB_TREG_KEY"], [patch.tomticket?.key, "OMB_TOMTICKET_TOKEN"],
     [patch.groq?.key, "OMB_GROQ_API_KEY"],
     [patch.meta?.key, "OMB_META_API_KEY"],
     [patch.anthropic?.key, "OMB_ANTHROPIC_API_KEY"],
@@ -912,7 +916,7 @@ export const WORKSPACE_CREDENTIAL_ENV = [
   "OMB_OPENROUTER_DECIDER_KEY",
   "OMB_OPENAI_IMAGE_KEY",
   "OMB_CUSTOM_IMAGE_KEY",
-  "OMB_OPENAI_LIVE_KEY", "OMB_TREG_KEY",
+  "OMB_OPENAI_LIVE_KEY", "OMB_TREG_KEY", "OMB_TOMTICKET_TOKEN",
   "COMPOSIO_API_KEY",
   "OMB_COMPOSIO_BROKER_TOKEN",
   "OMB_CLOUD_BOAT_TOKEN",
@@ -1047,7 +1051,7 @@ export function saveConfig(
   const before = configSaveListeners.size ? structuredClone(disk) : disk;
   const storedProfiles = storedBrowserProfilesSchema.safeParse(disk.browserProfiles);
   if (storedProfiles.success) disk.browserProfiles = storedProfiles.data;
-  for (const key of ["xai", "anthropic", "mistral", "cerebras", "treg", "groq", "meta", "openai", "openrouter", "openaiCompat", "composio", "box", "opencodeGo", "tts", "decider", "imageGen", "live", "profile", "rooms", "mcp", "threads", "context", "memory", "localVm", "features", "budgets", "billing", "decisions", "loopGuard", "onboarding", "browserEngine", "newBots", "safetyFloor"] as const) {
+  for (const key of ["xai", "anthropic", "mistral", "cerebras", "treg", "tomticket", "groq", "meta", "openai", "openrouter", "openaiCompat", "composio", "box", "opencodeGo", "tts", "decider", "imageGen", "live", "profile", "rooms", "mcp", "threads", "context", "memory", "localVm", "features", "budgets", "billing", "decisions", "loopGuard", "onboarding", "browserEngine", "newBots", "safetyFloor"] as const) {
     const section = checkedPatch[key];
     if (!section) continue;
     const current = jsonObjectSchema.safeParse(disk[key]);

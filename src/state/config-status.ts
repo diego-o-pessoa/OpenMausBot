@@ -15,6 +15,8 @@ export interface ConfigStatus {
   xResearch?: { included: boolean; unavailable?: boolean };
   /** The person's own treg key for research: configured or not, never the key. */
   treg?: { configured: boolean };
+  /** The TomTicket token routine watches read: configured or not, never the token. */
+  tomticket?: { configured: boolean };
   /** `everyClaudeBot`: the key runs every Claude bot, not only "Claude (API key)". */
   anthropic?: { configured: boolean; everyClaudeBot?: boolean };
   openai?: { configured: boolean };

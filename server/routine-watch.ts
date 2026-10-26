@@ -46,10 +46,10 @@ export async function tomticketFingerprint(
 }
 
 /** Null when the watch cannot run here (no token); the occurrence then runs as if nothing were watched. */
-export function routineWatchChecker(env: NodeJS.ProcessEnv, fetchImpl: typeof fetch = fetch) {
+export function routineWatchChecker(tomticketToken: () => string | undefined, fetchImpl: typeof fetch = fetch) {
   return async (watch: RoutineWatch): Promise<string | null> => {
     if (watch.kind !== "tomticket") return null;
-    const token = env.OMB_TOMTICKET_TOKEN?.trim();
+    const token = tomticketToken()?.trim();
     if (!token) return null;
     return tomticketFingerprint(token, watch.query, fetchImpl);
   };

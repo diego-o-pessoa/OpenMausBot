@@ -9,7 +9,7 @@ import type { LocaleKey } from "@/locales";
 import { SECTION_PROVIDER, type KeyResult, type KeyVia } from "@/lib/analytics-allowlist";
 import { keyRemoved, keySaved, keySaveFailure, keyTestResult, savedKeyResult } from "@/lib/product-events";
 
-export type ConfigSection = "composio" | "box" | "opencodeGo" | "anthropic" | "openai" | "openrouter" | "openaiCompat" | "xai" | "mistral" | "cerebras" | "groq" | "meta" | "treg";
+export type ConfigSection = "composio" | "box" | "opencodeGo" | "anthropic" | "openai" | "openrouter" | "openaiCompat" | "xai" | "mistral" | "cerebras" | "groq" | "meta" | "treg" | "tomticket";
 export type TestableProvider = "anthropic" | "openai" | "openrouter" | "openaiCompat" | "xai" | "mistral" | "cerebras" | "groq" | "meta" | "treg";
 
 const SECTIONS: Record<
@@ -45,15 +45,17 @@ const SECTIONS: Record<
   meta: { body: (v) => ({ meta: { key: v } }), flag: (c) => c.meta?.configured ?? false },
   xai: { body: (v) => ({ xai: { key: v } }), flag: (c) => c.xai?.configured ?? false },
   treg: { body: (v) => ({ treg: { key: v } }), flag: (c) => c.treg?.configured ?? false },
+  tomticket: { body: (v) => ({ tomticket: { key: v } }), flag: (c) => c.tomticket?.configured ?? false },
 };
 
 // Provider keys have no desktop-shell slot yet; they go to the server's own 0600 config. A secret the desktop's boot
 // migration moves into its encrypted store must save here, so Clear removes the stored copy too.
-const ELECTRON_CREDENTIAL: Partial<Record<ConfigSection, "composioApiKey" | "boxToken" | "opencodeGoApiKey" | "tregApiKey">> = {
+const ELECTRON_CREDENTIAL: Partial<Record<ConfigSection, "composioApiKey" | "boxToken" | "opencodeGoApiKey" | "tregApiKey" | "tomticketToken">> = {
   composio: "composioApiKey",
   box: "boxToken",
   opencodeGo: "opencodeGoApiKey",
   treg: "tregApiKey",
+  tomticket: "tomticketToken",
 };
 
 /** The desktop shell's encrypted slot for a section, if it has one. */
@@ -181,6 +183,15 @@ const CREDENTIALS: Record<
     descriptionKey: "keys.treg.desc",
     href: "https://treg.to",
     linkLabelKey: "keys.treg.link",
+    optional: true,
+    showLink: true,
+  },
+  tomticket: {
+    labelKey: "keys.tomticket.label",
+    placeholderKey: "keys.tomticket.placeholder",
+    descriptionKey: "keys.tomticket.desc",
+    href: "https://tomticket.tomticket.com/kb/criacao-do-token-de-acesso/criacao-do-token-de-acesso",
+    linkLabelKey: "keys.tomticket.link",
     optional: true,
     showLink: true,
   },

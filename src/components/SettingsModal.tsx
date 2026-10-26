@@ -742,7 +742,7 @@ export function SettingsModal() {
               <ApiKeyRow section="meta" testProvider="meta" />
               <OtherOpenAiCompatServers />
               <div className="pt-2 text-[11.5px] font-medium uppercase tracking-wide text-ink-secondary">{t("keys.integrations.title")}</div>
-              <ApiKeyRow section="treg" testProvider="treg" /><ApiKeyRow section="box" />
+              <ApiKeyRow section="treg" testProvider="treg" /><ApiKeyRow section="tomticket" /><ApiKeyRow section="box" />
               <VpsConnection />
               <ApiKeyRow section="opencodeGo" />
               {state.config?.cloudHome !== true && (

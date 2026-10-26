@@ -160,6 +160,10 @@ describe("the treg key row", () => {
     expect(tregVerdict({ ok: true })).toBe("treg is working ✓");
     expect(tregVerdict({ ok: false, message: "treg rejected this key. Copy it again from treg.to." })).toBe("treg rejected this key. Copy it again from treg.to.");
   });
+
+  it("uses the encrypted desktop slot for TomTicket", () => {
+    expect(desktopCredentialSlot("tomticket")).toBe("tomticketToken");
+  });
 });
 
 describe("desktop credential slots", () => {

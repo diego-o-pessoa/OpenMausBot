@@ -1743,6 +1743,14 @@ describe("credential env preference", () => {
     expect(process.env.OMB_FISH_AUDIO_API_KEY).toBeUndefined();
   });
 
+  it("syncCredentialEnv updates TomTicket without exposing it in another provider env", () => {
+    syncCredentialEnv({ tomticket: { key: "tomticket-workspace" } });
+    expect(process.env.OMB_TOMTICKET_TOKEN).toBe("tomticket-workspace");
+    expect(process.env.TOMTICKET_TOKEN).toBeUndefined();
+    syncCredentialEnv({ tomticket: { key: "" } });
+    expect(process.env.OMB_TOMTICKET_TOKEN).toBeUndefined();
+  });
+
   it("saves and clears the built-in Groq key without changing an operator's Groq key", () => {
     vi.stubEnv("GROQ_API_KEY", "groq-operator");
     try {

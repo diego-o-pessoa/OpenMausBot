@@ -512,6 +512,7 @@ export function createConfigRoutes(deps: ConfigRouteDeps): RouteHandler {
           if (persisted.imageGen?.customApiKey !== undefined) persisted.imageGen.customApiKey = "";
           if (persisted.live?.key !== undefined) persisted.live.key = "";
           if (persisted.treg?.key !== undefined) persisted.treg.key = "";
+          if (persisted.tomticket?.key !== undefined) persisted.tomticket.key = "";
           saveConfig(persisted);
           configWriteCommitted = true;
           syncCredentialEnv(patch);

@@ -9374,7 +9374,7 @@ routines = new RoutineManager({
   },
   createGoalTask: (groupId, title) => store.createGroupTask(groupId, title, false),
   goalTaskExists: (groupId, threadId) => Boolean(store.groupTaskByThread(groupId, threadId)),
-  watchFingerprint: routineWatchChecker(process.env),
+  watchFingerprint: routineWatchChecker(() => cfg.tomticket?.key),
   roomMainThread: (groupId) => {
     const tasks = store.group(groupId)?.tasks ?? [];
     return tasks.reduce<(typeof tasks)[number] | undefined>((first, task) => (!first || task.createdAt < first.createdAt ? task : first), undefined)?.threadId ?? null;
@@ -12817,7 +12817,7 @@ function configStatus() {
     cerebras: { configured: Boolean(cfg.cerebras?.key) },
     groq: { configured: Boolean(cfg.groq?.key) },
     meta: { configured: Boolean(cfg.meta?.key) },
-    xResearch: xResearchStatus(), treg: { configured: Boolean(cfg.treg?.key?.trim()) },
+    xResearch: xResearchStatus(), treg: { configured: Boolean(cfg.treg?.key?.trim()) }, tomticket: { configured: Boolean(cfg.tomticket?.key?.trim()) },
     anthropic: { configured: Boolean(cfg.anthropic?.key), everyClaudeBot: cfg.anthropic?.everyClaudeBot !== false },
     openai: { configured: Boolean(cfg.openai?.key) },
     openrouter: { configured: Boolean(cfg.openrouter?.key) },
