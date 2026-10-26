@@ -9,6 +9,12 @@ interface NotificationThreadOwner {
   tasks?: Array<{ threadId: string }>;
 }
 
+function primaryBotThread(bot: Pick<NotificationThreadOwner, "threadId" | "mainThreadId" | "tasks">): string {
+  return bot.mainThreadId && bot.tasks?.some((task) => task.threadId === bot.mainThreadId)
+    ? bot.mainThreadId
+    : bot.threadId;
+}
+
 interface NotificationRoutingState {
   bots: NotificationThreadOwner[];
   groups: NotificationThreadOwner[];
@@ -58,9 +64,8 @@ export function openNotificationTarget(
   else openBot(dispatch, bot, threadsShown);
 }
 
-export function botOpensTo(bot: Pick<NotificationThreadOwner, "threadId" | "mainThreadId" | "tasks">, threadsShown: boolean): string {
-  return !threadsShown && bot.mainThreadId && bot.tasks?.some((task) => task.threadId === bot.mainThreadId)
-    ? bot.mainThreadId : bot.threadId;
+export function botOpensTo(bot: Pick<NotificationThreadOwner, "threadId" | "mainThreadId" | "tasks">, _threadsShown: boolean): string {
+  return primaryBotThread(bot);
 }
 
 export function awayFromMainThread(bot: Pick<NotificationThreadOwner, "threadId" | "mainThreadId" | "tasks">, threadsShown: boolean): boolean {
@@ -82,12 +87,12 @@ export function openBot(
 /** With threads hidden the switch alone selects the bot, so the thread left behind keeps its unread mark. */
 export function openBotThread(
   dispatch: (action: Action) => void,
-  bot: Pick<NotificationThreadOwner, "id" | "threadId">,
+  bot: Pick<NotificationThreadOwner, "id" | "threadId" | "mainThreadId" | "tasks">,
   threadId: string,
-  threadsShown: boolean,
+  _threadsShown: boolean,
 ) {
-  if (threadsShown || threadId === bot.threadId) dispatch({ type: "select", id: bot.id });
-  dispatch({ type: "switchTask", botId: bot.id, threadId });
+  dispatch({ type: "select", id: bot.id });
+  if (threadId !== bot.threadId) dispatch({ type: "switchTask", botId: bot.id, threadId });
 }
 
 export interface ThreadTarget {

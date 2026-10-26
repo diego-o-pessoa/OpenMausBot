@@ -36,8 +36,8 @@ export function createAutomationDestinations(deps: AutomationDestinationDeps) {
       const opener = cloud?.opener(routine.id);
       const main = bot && !bot.hidden ? deps.mainThread(bot.id) : undefined;
       const mainAllowed = main && (!cloud || opener === cloud.owner);
-      if (chosen && !chosen.routineRunId && !(mainAllowed && legacyResultsThread(routine.name, chosen))) return { threadId: chosen.threadId };
       if (mainAllowed) return { threadId: main, main: true };
+      if (chosen && !chosen.routineRunId && !(mainAllowed && legacyResultsThread(routine.name, chosen))) return { threadId: chosen.threadId };
       const threadId = cloud ? chatOfItsOwn(routine.botId, routine.name, opener!) : undefined;
       return threadId ? { threadId } : undefined;
     },

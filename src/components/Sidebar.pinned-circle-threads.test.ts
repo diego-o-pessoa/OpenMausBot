@@ -116,34 +116,27 @@ describe("pinned circle thread list", () => {
     expect(markup).not.toContain("Drag to reorder");
   });
 
-  it("opens the same pinned bots as rows, in circle order, with the thread menu", () => {
+  it("opens the same pinned bots as rows, in circle order, without thread browsing", () => {
     const markup = renderThreads(false, [atlas, beacon]);
     expect(markup).toContain('aria-expanded="true"');
     expect(markup).toContain("Collapse Pinned");
     expect(markup.indexOf("Atlas")).toBeLessThan(markup.indexOf("Beacon"));
     expect(markup).toContain('aria-label="Actions for Atlas"');
-    expect(markup).toContain("Expand Atlas threads");
+    expect(markup).not.toContain("Expand Atlas threads");
     expect(markup).not.toContain("data-sidebar-pinned-circles");
     expect(markup).not.toContain("Drag to reorder");
   });
 
-  it("offers the thread list from the circle, closed until the chevron opens it", () => {
+  it("does not offer a thread list from the circle", () => {
     const markup = renderCircle(atlas);
-    const toggle = markup.match(/<button[^>]*aria-label="Expand Atlas threads"[^>]*>/)?.[0];
-    expect(toggle).toContain('aria-expanded="false"');
-    expect(toggle).toContain('aria-controls="pinned-circle-threads-atlas"');
     const botButton = markup.slice(markup.indexOf('data-sidebar-bot-row="atlas"'), markup.indexOf("</button>"));
     expect(botButton).not.toContain("Expand Atlas threads");
     expect(markup).not.toContain("data-sidebar-thread-row");
   });
 
-  it("lists that circle's threads, with a way to start another", () => {
+  it("does not render a second conversation panel", () => {
     const markup = renderToStaticMarkup(createElement(PinnedCircleThreadPanel, row(atlas)));
-    expect(markup).toContain('data-sidebar-pinned-circle-thread-list="atlas"');
-    expect(markup).toContain("Current");
-    expect(markup).toContain("Earlier");
-    expect(markup).toContain("data-sidebar-thread-row");
-    expect(markup).toContain("New thread");
+    expect(markup).toBe("");
   });
 
   it("hides the circle disclosure when threads are off", () => {

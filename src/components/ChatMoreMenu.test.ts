@@ -74,38 +74,25 @@ describe("ChatMoreMenu, the round ⋯ for the bot panel", () => {
     expect(menu.trigger).toMatch(/class="[^"]*\bsize-8\b[^"]*\brounded-full\b[^"]*\bbg-raised\/50\b/);
   });
 
-  it("offers threads in Simple mode, and Usage and the Inspector unlocked", () => {
+  it("keeps chat actions available without thread management", () => {
     const menu = menuOf(createElement(ChatMoreMenu, { bot }));
-    expect(keys(menu.items)).toEqual(["find", "new-thread", "threads", "copy", "download", "activity", "inspector"]);
+    expect(keys(menu.items)).toEqual(["find", "copy", "download", "activity", "inspector"]);
     for (const item of menu.items) {
       expect(item.disabled, item.key).toBeFalsy();
       expect(item.heading ?? "", item.key).not.toBe("In Advanced mode");
     }
-    expect(menu.items.find((item) => item.key === "new-thread")).toMatchObject({ label: "New thread", heading: "Threads", separatorBefore: true });
     expect(menu.items.find((item) => item.key === "inspector")?.separatorBefore).toBe(false);
   });
 
-  it("starts a new thread with the bot", () => {
+  it("does not offer a second thread", () => {
     const menu = menuOf(createElement(ChatMoreMenu, { bot }));
-    menu.items.find((item) => item.key === "new-thread")!.onSelect();
-    expect(fixture.dispatch).toHaveBeenCalledWith({ type: "newTask", botId: "pepper" });
+    expect(keys(menu.items)).not.toContain("new-thread");
+    expect(keys(menu.items)).not.toContain("threads");
   });
 
-  it("lists the bot's threads newest first, without routine runs, marks the open one and opens another", () => {
-    const threads = menuOf(createElement(ChatMoreMenu, { bot })).items.find((item) => item.key === "threads")!;
-    expect(threads).toMatchObject({ label: "All threads", value: "3" });
-    expect(threads.submenu!.map((item) => [item.label, Boolean(item.active)])).toEqual([
-      ["Trip plan", true],
-      ["New thread", false],
-      ["Our chat", false],
-    ]);
-    threads.submenu![2].onSelect();
-    expect(fixture.dispatch).toHaveBeenCalledWith({ type: "switchTask", botId: "pepper", threadId: "main" });
-  });
-
-  it("leaves All threads out while the bot has one thread", () => {
+  it("keeps the same menu regardless of task history", () => {
     const single = { ...bot, threadId: "main", tasks: [task("main", "Our chat", 1), task("routine", "Morning digest", 5, { routineRunId: "run-1" })] };
-    expect(keys(menuOf(createElement(ChatMoreMenu, { bot: single })).items)).toEqual(["find", "new-thread", "copy", "download", "activity", "inspector"]);
+    expect(keys(menuOf(createElement(ChatMoreMenu, { bot: single })).items)).toEqual(["find", "copy", "download", "activity", "inspector"]);
     expect(keys(menuOf(createElement(ChatMoreMenu, { bot: { ...bot, tasks: undefined } })).items)).not.toContain("threads");
   });
 

@@ -2993,6 +2993,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           break;
         case "newTask":
         case "switchTask": {
+          if (action.type === "newTask") {
+            const bot = stateRef.current.bots.find((candidate) => candidate.id === action.botId);
+            const mainThreadId = bot?.mainThreadId && bot.tasks?.some((task) => task.threadId === bot.mainThreadId)
+              ? bot.mainThreadId
+              : undefined;
+            if (mainThreadId) {
+              action.onCreated?.();
+              rawDispatch({ type: "switchTask", botId: action.botId, threadId: mainThreadId });
+              break;
+            }
+          }
           const revision = (navigation.get(action.botId) ?? 0) + 1;
           navigation.set(action.botId, revision);
           const selectedAtStart = selectionRevision;

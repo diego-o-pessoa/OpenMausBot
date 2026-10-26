@@ -80,12 +80,12 @@ describe("bot-first sidebar", () => {
   });
 
   it.each([
-    { advanced: true, enabled: true, density: "comfortable", size: 32, spacing: ["gap-2", "py-2", "pl-6"] },
-    { advanced: true, enabled: true, density: "compact", size: 26, spacing: ["gap-1.5", "py-1", "pl-6"] },
+    { advanced: true, enabled: true, density: "comfortable", size: 46, spacing: ["gap-3", "py-2.5", "pl-2.5"] },
+    { advanced: true, enabled: true, density: "compact", size: 42, spacing: ["gap-2.5", "py-2", "pl-2"] },
     { advanced: true, enabled: true, density: "icons", size: 44, spacing: ["justify-center", "px-1", "py-1.5"] },
-    { advanced: true, enabled: false, density: "comfortable", size: 44, spacing: ["gap-3", "py-2", "pl-2.5", "pr-9"] },
-    { advanced: false, enabled: false, density: "comfortable", size: 38, spacing: ["gap-2.5", "py-2", "pl-2", "pr-3", "group-hover:pr-9"] },
-    { advanced: false, enabled: false, density: "compact", size: 36, spacing: ["gap-2.5", "py-1.5", "pl-2", "pr-9"] },
+    { advanced: true, enabled: false, density: "comfortable", size: 46, spacing: ["gap-3", "py-2.5", "pl-2.5", "pr-9"] },
+    { advanced: false, enabled: false, density: "comfortable", size: 50, spacing: ["gap-3", "py-2.5", "pl-2", "pr-3", "group-hover:pr-9"] },
+    { advanced: false, enabled: false, density: "compact", size: 42, spacing: ["gap-2.5", "py-2", "pl-2", "pr-9"] },
     { advanced: false, enabled: false, density: "icons", size: 36, spacing: ["h-[52px]", "justify-center"] },
   ] as const)("sizes bot portraits and row spacing in $density density with threads $enabled (advanced $advanced)", ({ advanced, enabled, density, size, spacing }) => {
     fixture.advanced = advanced;
@@ -127,7 +127,7 @@ describe("bot-first sidebar", () => {
     fixture.showThreads = false;
     const markup = renderToStaticMarkup(createElement(BotListItem, rowProps("comfortable", { ...bot, tasks: [], projects: [] })));
     const name = markup.match(/<span class="flex min-w-0 grow items-center gap-1\.5 truncate text-ink ([^"]*)"/)?.[1];
-    expect(name).toBe(advanced ? "text-[15px] font-semibold leading-5" : "text-[14px] font-normal leading-[19px]");
+    expect(name).toBe("text-[16px] font-semibold leading-5");
     expect(markup).toContain("truncate text-[13px] leading-[18px]");
   });
 
@@ -172,7 +172,7 @@ describe("bot-first sidebar", () => {
     const used = { ...bot, mainThreadId: "idle-history" };
     for (const enabled of [false, true]) {
       fixture.showThreads = enabled;
-      const opened = enabled ? { type: "select", id: bot.id } : { type: "switchTask", botId: bot.id, threadId: "idle-history" };
+      const opened = [{ type: "select", id: bot.id }, { type: "switchTask", botId: bot.id, threadId: "idle-history" }];
       const trees: ReactNode[] = [];
       function Capture() { const tree = [botRow(rowProps(density, used)), pinnedCircle(rowProps(density, used))]; trees.push(...tree); return tree; }
       renderToStaticMarkup(createElement(Capture));
@@ -180,11 +180,11 @@ describe("bot-first sidebar", () => {
         const row = findElement(tree, "data-sidebar-bot-row", bot.id)!;
         fixture.dispatch.mockClear();
         row.props.onClick!({ type: "click", target: {} } as MouseEvent);
-        expect(fixture.dispatch).toHaveBeenCalledExactlyOnceWith(opened);
+        expect(fixture.dispatch.mock.calls.map(([action]) => action)).toEqual(opened);
         if (!row.props.onKeyDown) continue;
         fixture.dispatch.mockClear();
         row.props.onKeyDown({ key: "Enter", preventDefault: vi.fn() } as unknown as KeyboardEvent);
-        expect(fixture.dispatch).toHaveBeenCalledExactlyOnceWith(opened);
+        expect(fixture.dispatch.mock.calls.map(([action]) => action)).toEqual(opened);
       }
     }
   });
@@ -193,7 +193,7 @@ describe("bot-first sidebar", () => {
     fixture.state.selectedId = bot.id;
     const markup = renderToStaticMarkup(createElement(BotListItem, rowProps(density)));
     expect(markup).not.toContain("data-sidebar-thread-row");
-    if (density !== "icons") expect(markup).toContain('aria-label="Expand Atlas threads" aria-expanded="false"');
+    expect(markup).not.toContain("Expand Atlas threads");
   });
 
   it.each(densities)("hides thread browsing and creation but keeps attention accessible in %s density", (density) => {
@@ -223,21 +223,16 @@ describe("bot-first sidebar", () => {
     expect(shown).toContain('data-sidebar-thread-row="idle-history"');
   });
 
-  it("only hides thread/folder creation in the bot context menu", () => {
+  it("removes thread and folder creation from the bot context menu", () => {
     const render = () => renderToStaticMarkup(createElement(BotContextMenu, {
       menu: { botId: bot.id, x: 0, y: 0 }, onClose: vi.fn(), onArchive: vi.fn(), onDelete: vi.fn(), onMoveToSection: vi.fn(), onNewFolder: vi.fn(), onNewTaskFolder: vi.fn(),
     }));
-    const enabled = render();
-    expect(enabled).toContain("New thread");
-    expect(enabled).toContain("New folder");
-    expect(enabled).toContain("Delete all threads…");
-    fixture.showThreads = false;
-    const disabled = render();
-    expect(disabled).not.toContain("New thread");
-    expect(disabled).not.toContain("New folder");
-    expect(disabled).toContain("Delete all threads…");
-    expect(disabled).toContain("Edit Profile");
-    expect(disabled).toContain("Move to team");
+    const markup = render();
+    expect(markup).not.toContain("New thread");
+    expect(markup).not.toContain("New folder");
+    expect(markup).toContain("Delete all threads…");
+    expect(markup).toContain("Edit Profile");
+    expect(markup).toContain("Move to team");
   });
 
   it("Edit profile opens the panel without naming a section", () => {
@@ -287,10 +282,10 @@ describe("bot-first sidebar", () => {
     ]);
   });
 
-  it("reveals a matching sole thread when searching a bot", () => {
+  it("does not reveal a hidden thread when searching a bot", () => {
     const single = { ...bot, projects: [], tasks: [bot.tasks![0]], unread: false };
     const markup = renderToStaticMarkup(createElement(BotListItem, rowProps("comfortable", single, "last selected")));
-    expect(markup).toContain('data-sidebar-thread-row="last-selected"');
+    expect(markup).not.toContain('data-sidebar-thread-row="last-selected"');
   });
 
   it("does not change group collaboration histories or creation", () => {
@@ -343,7 +338,7 @@ describe("activity-only escape hatch", () => {
     function Capture() { tree = SidebarBotActivity({ bot, rowThreadId: bot.threadId, density: "comfortable", pendingQueued: fixture.state.pendingQueued!, dispatch: fixture.dispatch }); return tree; }
     const markup = renderToStaticMarkup(createElement(Capture));
     findElement(tree, "data-sidebar-activity-row", "approval")!.props.onClick!({} as MouseEvent);
-    expect(fixture.dispatch).toHaveBeenCalledExactlyOnceWith({ type: "switchTask", botId: bot.id, threadId: "approval" });
+    expect(fixture.dispatch).toHaveBeenCalledExactlyOnceWith({ type: "switchTask", botId: bot.id, threadId: bot.threadId });
     expect(markup).not.toContain("Actions for");
     expect(markup).not.toContain("New thread");
     expect(markup).not.toContain("Delete");
@@ -372,6 +367,6 @@ describe("activity-only escape hatch", () => {
     expect(rows()).toEqual(["main-chat"]);
     fixture.showThreads = true;
     fixture.state.selectedId = "other-bot";
-    expect(rows()).toEqual(["main-chat"]);
+    expect(rows()).toEqual(["left-behind"]);
   });
 });

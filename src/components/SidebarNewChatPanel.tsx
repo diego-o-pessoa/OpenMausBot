@@ -89,11 +89,10 @@ export function SidebarNewChatPanel({
   ];
   const count = actions.length + bots.length;
   const selected = cursor < actions.length ? cursor : bots.length ? Math.min(cursor, count - 1) : -1;
-  const rowLabel = showThreads ? t("sidebar.newChat.start") : t("sidebar.newChat.open");
+  const rowLabel = t("sidebar.newChat.open");
 
   const start = (bot: Bot) => {
-    if (showThreads) dispatch({ type: "newTask", botId: bot.id });
-    else openBot(dispatch, bot, false);
+    openBot(dispatch, bot, showThreads);
     onClose();
   };
   const activate = (index: number) => {

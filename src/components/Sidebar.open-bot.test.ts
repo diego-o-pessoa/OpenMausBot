@@ -66,7 +66,7 @@ function render(component: () => ReactNode) {
 }
 const label = (node: ReactElement<Props>) => Children.toArray(node.props.children).filter((child) => typeof child === "string").join("");
 const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
-const opened = (id: string) => fixture.showThreads ? { type: "select", id } : { type: "switchTask", botId: id, threadId: `${id}-main` };
+const opened = (id: string) => [{ type: "select", id }, { type: "switchTask", botId: id, threadId: `${id}-main` }];
 const actions = () => fixture.dispatch.mock.calls.map(([action]) => action).filter((action) => action.type !== "botPatched");
 
 beforeEach(() => {
@@ -88,14 +88,14 @@ describe.each([false, true])("with threads shown: %s", (shown) => {
       menu: { botId, x: 0, y: 0 }, onClose: vi.fn(), onArchive: vi.fn(), onDelete: vi.fn(), onMoveToSection: vi.fn(), onNewFolder: vi.fn(), onNewTaskFolder: vi.fn(),
     })).find((node) => node.props.role === "menuitem" && label(node) === "Edit Profile")!;
     menu("atlas").props.onClick!();
-    expect(actions()).toEqual([opened("atlas"), { type: "toggleSettings", open: true }]);
+    expect(actions()).toEqual([...opened("atlas"), { type: "toggleSettings", open: true }]);
     fixture.dispatch.mockReset();
     menu("scout").props.onClick!();
     expect(actions()).toEqual([{ type: "select", id: "scout" }, { type: "toggleSettings", open: true }]);
     fixture.dispatch.mockReset();
     fixture.state = { ...fixture.state, settingsOpen: true };
     menu("atlas").props.onClick!();
-    expect(actions()).toEqual([opened("atlas")]);
+    expect(actions()).toEqual(opened("atlas"));
   });
 
   it("opens the next bot after archiving the one on screen, and the archived one again on Undo", async () => {
@@ -106,11 +106,11 @@ describe.each([false, true])("with threads shown: %s", (shown) => {
     sidebar().find((node) => node.type === ConfirmDialog && node.props.open)!.props.onConfirm!();
     await flush();
     expect(fixture.api).toHaveBeenCalledWith("/api/bots/scout", expect.objectContaining({ body: JSON.stringify({ hidden: true }) }));
-    expect(actions()).toEqual([opened("atlas")]);
+    expect(actions()).toEqual(opened("atlas"));
     fixture.dispatch.mockReset();
     sidebar().find((node) => node.type === "button" && label(node) === "Undo")!.props.onClick!();
     await flush();
-    expect(actions()).toEqual([opened("scout")]);
+    expect(actions()).toEqual(opened("scout"));
   });
 
   it("opens a bot restored from Archived bots, and the first of all restored", async () => {
@@ -120,10 +120,10 @@ describe.each([false, true])("with threads shown: %s", (shown) => {
     const panel = () => render(() => ArchivedBotsPanel({ bots: archived, onClose: vi.fn(), onRestored: vi.fn() }));
     panel().find((node) => node.props.onRestore && (node.props.bot as Bot).id === "atlas")!.props.onRestore!();
     await flush();
-    expect(actions()).toEqual([opened("atlas")]);
+    expect(actions()).toEqual(opened("atlas"));
     fixture.dispatch.mockReset();
     panel().find((node) => node.type === "button" && label(node) === "Restore all")!.props.onClick!();
     await flush();
-    expect(actions()).toEqual([opened("scout")]);
+    expect(actions()).toEqual(opened("scout"));
   });
 });
