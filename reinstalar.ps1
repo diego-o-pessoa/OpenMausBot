@@ -3,8 +3,20 @@ $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
 if (-not $SemBuild) {
-    pnpm package:win
-    if ($LASTEXITCODE -ne 0) { throw "pnpm package:win falhou (codigo $LASTEXITCODE)." }
+    $previousNodeOptions = $env:NODE_OPTIONS
+    $packageExitCode = 0
+    try {
+        $env:NODE_OPTIONS = '--max-old-space-size=4096'
+        pnpm package:win
+        $packageExitCode = $LASTEXITCODE
+    } finally {
+        if ($null -eq $previousNodeOptions) {
+            Remove-Item Env:NODE_OPTIONS -ErrorAction SilentlyContinue
+        } else {
+            $env:NODE_OPTIONS = $previousNodeOptions
+        }
+    }
+    if ($packageExitCode -ne 0) { throw "pnpm package:win falhou (codigo $packageExitCode)." }
 }
 
 $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
