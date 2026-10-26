@@ -158,6 +158,14 @@ Mais recente primeiro. Modelo de entrada:
 - **Como verificar:** comando ou passo usado.
 ```
 
+### 2026-10-26 — Backup do reinstalar.ps1 não segue junctions
+- **O quê:** o robocopy do backup passou a usar `/XJ`.
+- **Por quê:** as pastas `task-workspaces\...\{.agents,.claude,.grok}\skills\*` são junctions para skills; as que
+  apontavam para skills apagadas faziam o robocopy sair com código 9 e o script abortar a instalação. Os alvos
+  das junctions já ficam dentro de `.openmausbot`, então continuam no backup.
+- **Onde:** `reinstalar.ps1`.
+- **Como verificar:** `robocopy %USERPROFILE%\.openmausbot <pasta-teste> /E /XJ` sai com código < 8.
+
 ### 2026-10-24 — Instalador para Linux (sem Docker)
 - **O quê:** `instalar-linux.sh` instala ou atualiza este fork numa máquina Linux sem Docker (feito para a área de
   trabalho Ubuntu em contêiner que é usada pelo navegador): instala o Node 24 via nvm (sem root), clona/atualiza o
