@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createRemoteServerJobs, installScript, jobPercent, parseRemoteLine, publicJob, remoteScriptCommand, sshArgs, type SshRunner } from "./remote-server.ts";
+import { createRemoteServerJobs, installScript, jobPercent, parseRemoteLine, publicJob, remoteScriptCommand, sshArgs, unixLineEndings, type SshRunner } from "./remote-server.ts";
 
 const REPO = "https://github.com/diego-o-pessoa/OpenMausBot.git";
 
@@ -40,6 +40,10 @@ describe("jobPercent", () => {
 });
 
 describe("the SSH command", () => {
+  it("sends the scripts with Unix line endings even from a Windows checkout", () => {
+    expect(unixLineEndings("set -euo pipefail\r\necho ok\r\n")).toBe("set -euo pipefail\necho ok\n");
+    expect(installScript()).not.toContain("\r");
+  });
   it("quotes every value it sends, so a repository or label cannot run its own command", () => {
     const command = remoteScriptCommand({ action: "install", repo: REPO, branch: "main", pairLabel: "Diego's PC; rm -rf /" });
     expect(command).toBe(`env OMB_ACTION='install' OMB_REPO='${REPO}' OMB_BRANCH='main' OMB_SERVER_PORT=8799 OMB_PAIR_LABEL='Diegos PC rm -rf ' bash -s`);

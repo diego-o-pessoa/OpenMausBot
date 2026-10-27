@@ -34,3 +34,5 @@ Dockerfile text eol=lf
 # checkout on Windows fails both for a reason that has nothing to do with the page.
 shared/app-frame/app-host.html text eol=lf
 instalar-linux.sh text eol=lf
+# bash on the VPS reads these from stdin; a CRLF checkout breaks every line.
+deploy/remote/*.sh text eol=lf
