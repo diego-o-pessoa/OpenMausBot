@@ -116,6 +116,14 @@ describe("the mascot on the shared clock", () => {
     expect(mascotClock().pending()).toBe(0);
   });
 
+  it("comes to rest when a row stops moving as its agent's work ends", () => {
+    render([{ state: "thinking", size: 36, syncKey: "augusto" }]);
+    run(2000);
+    render([{ state: "idle", size: 36, animated: false, syncKey: "augusto" }]);
+    run(FINALE_MS + 1000);
+    expect(mascotClock().pending()).toBe(0);
+  });
+
   it("moves every mascot of an agent once a live one starts working", () => {
     render([
       { state: "working", size: 36, syncKey: "maya" },

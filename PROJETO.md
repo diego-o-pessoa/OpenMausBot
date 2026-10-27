@@ -169,6 +169,11 @@ Mais recente primeiro. Modelo de entrada:
 - **Onde:** `src/components/SphereMascot.tsx`, `ChatView.tsx`, `src/state/store.tsx`.
 - **Como verificar:** `npx vitest run src/components/CursorAvatar.clock.test.ts` (o teste novo falha sem a
   correção).
+- **Correção seguinte (mesmo dia):** a regra acima deixava a animação presa em "pensando" depois que um bot
+  respondia num grupo: a linha da barra lateral para de animar quando o trabalho acaba, e um mascote parado
+  só pedia o sorriso, sem avisar que o trabalho tinha acabado; terminado o sorriso, ele voltava a pensar.
+  Agora o mascote parado que vê o fim do trabalho marca o agente como parado (teste "comes to rest when a row
+  stops moving as its agent's work ends").
 
 ### 2026-10-26 — Instalador do app de desktop para Linux
 - **O quê:** `instalar-linux.sh --desktop` compila o app de desktop deste fork (`pnpm package:linux`) e

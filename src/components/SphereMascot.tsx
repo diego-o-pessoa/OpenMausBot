@@ -127,7 +127,10 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
     const showsLiveState = !paused;
     if (!reduced && e.director) {
       if (showsLiveState) e.director.setActivity(activity, performance.now(), e.face);
-      else if (was !== "idle" && activity === "idle") e.director.celebrate(performance.now(), e.face);
+      else if (was !== "idle" && activity === "idle") {
+        e.director.setActivity("idle", performance.now(), e.face);
+        e.director.celebrate(performance.now(), e.face);
+      }
     }
     e.drawn = "";
     wake();
