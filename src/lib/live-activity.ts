@@ -89,11 +89,12 @@ function toolActivityPhrases(tool: { name: string; spoken?: string }): LiveActiv
   const spoken = tool.spoken?.trim();
   if (spoken) return { phase: `spoken:${spoken}`, phrases: [sentenceCase(spoken)] };
 
-  const toolName = tool.name.replace(/^mcp__[^_]+__/, "").split(":", 1)[0] ?? "";
-  for (const [pattern, key] of FALLBACK_LABELS) {
-    if (pattern.test(toolName)) return phaseOf(key);
-  }
-  return phaseOf("chat.activity.working");
+  return phaseOf(toolActivityKey(tool.name));
+}
+
+export function toolActivityKey(name: string): LocaleKey {
+  const toolName = name.replace(/^mcp__[^_]+__/, "").split(":", 1)[0] ?? "";
+  return FALLBACK_LABELS.find(([pattern]) => pattern.test(toolName))?.[1] ?? "chat.activity.working";
 }
 
 function hash(value: string): number {

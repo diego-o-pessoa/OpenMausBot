@@ -3,15 +3,18 @@ import React, { useEffect, useId, useMemo, useRef } from "react";
 import type { CursorAvatarHandle, CursorSilhouette } from "./CursorAvatar";
 import { FACE_BOX } from "./cursor-face-data";
 import { mascotClock, usePrefersReducedMotion, type MascotTicket } from "./mascot-clock";
+import { MascotDirector } from "./mascot-director";
 import { FULL_FRAME_MS, VIEW_SPAN } from "./mascot-motion";
-import { DONE_TRACK, PRESS_TRACK, WORKING_TRACK } from "./mascot-tracks";
+import { PRESS_TRACK } from "./mascot-tracks";
 import {
   BLINK_MS,
-  HOVER_FACE,
+  DOT_SPACING,
+  FRONT_FACE,
   IDLE_FACE,
   SMILE_STROKE,
   STILL_WORKING_FACE,
   blinkOpenness,
+  dotPose,
   eyeOpacity,
   faceDistance,
   lookToward,
@@ -21,18 +24,19 @@ import {
   trackDurationMs,
   trackFaceAt,
   type Face,
-  type MascotMood,
+  type MascotActivity,
 } from "./sphere-mascot";
 
 const VIEW_BOX = `-15 -15 ${VIEW_SPAN} ${VIEW_SPAN}`;
 const BODY_RADIUS = FACE_BOX / 2;
 const CIRCLE_ANCHOR_OFFSET: [number, number] = [0.45, 4];
 const EASE_SECONDS = 0.06;
-const DONE_MS = trackDurationMs(DONE_TRACK, false);
-const PRESS_MS = trackDurationMs(PRESS_TRACK, false);
+const PRESS_MS = trackDurationMs(PRESS_TRACK);
+/** Grok watches the pointer anywhere on the agent's row; the row marks itself with this attribute. */
+const HOVER_REGION = "[data-mascot-hover]";
 
 export interface SphereMascotProps {
-  mood?: MascotMood;
+  activity?: MascotActivity;
   /** Holds one face, for previews and tests. */
   face?: Face;
   size?: number | string;
@@ -51,7 +55,7 @@ export interface SphereMascotHandle extends CursorAvatarHandle {
 }
 
 export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotProps>(function SphereMascot(
-  { mood = "idle", face, size = 160, fill, silhouette, paused = false, interactive = true, eyeColor = "#ffffff", title, className, style },
+  { activity = "idle", face, size = 160, fill, silhouette, paused = false, interactive = true, eyeColor = "#ffffff", title, className, style },
   ref,
 ) {
   const reactId = useId();
@@ -60,25 +64,24 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
   const bodyGroup = useRef<SVGGElement | null>(null);
   const pills = [useRef<SVGPathElement | null>(null), useRef<SVGPathElement | null>(null)];
   const smiles = [useRef<SVGPathElement | null>(null), useRef<SVGPathElement | null>(null)];
+  const sideDots = [useRef<SVGCircleElement | null>(null), useRef<SVGCircleElement | null>(null)];
   const ticket = useRef<MascotTicket | null>(null);
   const reduced = usePrefersReducedMotion();
   const sizePx = typeof size === "number" ? size : 160;
   const centre: [number, number] = [silhouette.anchor.x + CIRCLE_ANCHOR_OFFSET[0], silhouette.anchor.y + CIRCLE_ANCHOR_OFFSET[1]];
 
   const engine = useRef({
-    props: { mood, pinned: face, paused, reduced, interactive, sizePx, centre },
-    face: face ?? (mood === "working" ? STILL_WORKING_FACE : IDLE_FACE),
-    workStart: 0,
-    doneStart: null as number | null,
+    props: { activity, pinned: face, paused, reduced, interactive, sizePx, centre },
+    face: face ?? (activity === "idle" ? IDLE_FACE : STILL_WORKING_FACE),
+    director: new MascotDirector(),
     pressStart: null as number | null,
     blinkStart: null as number | null,
     hover: false,
     pointer: [0, 0] as [number, number],
-    lastMood: mood,
     last: 0,
     drawn: "",
   });
-  engine.current.props = { mood, pinned: face, paused, reduced, interactive, sizePx, centre };
+  engine.current.props = { activity, pinned: face, paused, reduced, interactive, sizePx, centre };
   const wake = () => ticket.current?.wake();
 
   React.useImperativeHandle(
@@ -96,8 +99,9 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       },
       setExpression: () => {},
       celebrate: () => {
-        if (engine.current.props.reduced) return;
-        engine.current.doneStart = performance.now();
+        const e = engine.current;
+        if (e.props.reduced) return;
+        e.director.celebrate(performance.now(), e.face);
         wake();
       },
     }),
@@ -106,16 +110,11 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
 
   useEffect(() => {
     const e = engine.current;
-    const now = performance.now();
-    if (e.lastMood === "working" && mood !== "working" && !reduced) e.doneStart = now;
-    if (mood === "working" && e.lastMood !== "working") {
-      e.workStart = now;
-      e.doneStart = null;
-    }
-    e.lastMood = mood;
+    if (reduced) e.director = new MascotDirector();
+    else e.director.setActivity(activity, performance.now(), e.face);
     e.drawn = "";
     wake();
-  }, [mood, face, paused, reduced, interactive, sizePx, silhouette]);
+  }, [activity, face, paused, reduced, interactive, sizePx, silhouette]);
 
   useEffect(() => {
     const targetFace = (now: number): { face: Face; moving: boolean } => {
@@ -123,17 +122,17 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       const p = e.props;
       if (p.pinned) return { face: p.pinned, moving: false };
       if (e.pressStart !== null) {
-        if (now - e.pressStart < PRESS_MS) return { face: trackFaceAt(PRESS_TRACK, now - e.pressStart, false), moving: true };
+        if (now - e.pressStart < PRESS_MS) return { face: trackFaceAt(PRESS_TRACK, now - e.pressStart), moving: true };
         e.pressStart = null;
       }
-      if (e.doneStart !== null) {
-        if (now - e.doneStart < DONE_MS) return { face: trackFaceAt(DONE_TRACK, now - e.doneStart, false), moving: true };
-        e.doneStart = null;
+      const working = p.activity !== "idle";
+      if (working && (p.paused || p.reduced)) return { face: STILL_WORKING_FACE, moving: false };
+      if (!p.reduced) {
+        const performed = e.director.frame(now);
+        if (performed) return { face: performed, moving: true };
       }
-      if (e.hover && p.interactive) return { face: lookToward(HOVER_FACE, e.pointer[0], e.pointer[1]), moving: false };
-      if (p.mood !== "working") return { face: IDLE_FACE, moving: false };
-      if (p.paused || p.reduced) return { face: STILL_WORKING_FACE, moving: false };
-      return { face: trackFaceAt(WORKING_TRACK, now - e.workStart, true), moving: true };
+      if (e.hover && p.interactive) return { face: lookToward(FRONT_FACE, e.pointer[0], e.pointer[1]), moving: false };
+      return { face: IDLE_FACE, moving: false };
     };
 
     const frame = (now: number): number => {
@@ -154,28 +153,53 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
 
       const f = e.face;
       const [cx, cy] = p.centre;
-      const sx = f.scale * f.stretchX;
-      const sy = f.scale * f.stretchY;
+      const middle = dotPose(f.beat[1]);
+      const shrink = 1 + (middle.radius - 1) * f.dots;
+      const sx = f.scale * f.stretchX * shrink;
+      const sy = f.scale * f.stretchY * shrink;
+      const ox = f.x * BODY_RADIUS;
+      const oy = -(f.y + middle.lift * f.dots) * BODY_RADIUS;
       const bodyTransform =
-        Math.abs(sx - 1) < 1e-4 && Math.abs(sy - 1) < 1e-4
+        Math.abs(sx - 1) < 1e-4 && Math.abs(sy - 1) < 1e-4 && Math.abs(ox) < 0.01 && Math.abs(oy) < 0.01
           ? ""
-          : `translate(${cx.toFixed(2)} ${cy.toFixed(2)}) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(${(-cx).toFixed(2)} ${(-cy).toFixed(2)})`;
+          : `translate(${(cx + ox).toFixed(2)} ${(cy + oy).toFixed(2)}) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(${(-cx).toFixed(2)} ${(-cy).toFixed(2)})`;
+      const bodyOpacity = 1 + (middle.opacity - 1) * f.dots;
+      const eyesShown = Math.max(0, 1 - f.dots * 2.5);
+      const sidesShown = Math.max(0, Math.min(1, (f.dots - 0.55) / 0.3));
+      const sides = [f.beat[0], f.beat[2]].map((lit, i) => {
+        const pose = dotPose(lit);
+        return {
+          cx: cx + (i === 0 ? -DOT_SPACING : DOT_SPACING) * BODY_RADIUS,
+          cy: cy - pose.lift * BODY_RADIUS,
+          r: pose.radius * BODY_RADIUS * sidesShown,
+          opacity: pose.opacity,
+        };
+      });
       const placed = f.eyes.map((eye) => {
         const at = `translate(${(cx + eye.x * BODY_RADIUS).toFixed(2)} ${(cy - eye.y * BODY_RADIUS).toFixed(2)})`;
         return {
           pill: `${at} scale(1 ${open.toFixed(3)}) rotate(${eye.angle.toFixed(1)}) scale(${BODY_RADIUS.toFixed(3)})`,
           smile: `${at} rotate(${((((eye.angle + 90) % 180) + 180) % 180 - 90).toFixed(1)}) scale(${BODY_RADIUS.toFixed(3)})`,
           d: pillPath(eye.length, eye.width),
-          opacity: eyeOpacity(eye),
+          opacity: eyeOpacity(eye) * eyesShown,
         };
       });
-      const drawn = `${bodyTransform}|${placed.map((q) => q.pill + q.d + q.opacity.toFixed(2)).join("|")}|${f.smile.toFixed(3)}`;
+      const drawn = `${bodyTransform}|${bodyOpacity.toFixed(3)}|${sides.map((s) => `${s.cy.toFixed(2)},${s.r.toFixed(2)},${s.opacity.toFixed(2)}`).join("|")}|${placed.map((q) => q.pill + q.d + q.opacity.toFixed(2)).join("|")}|${f.smile.toFixed(3)}`;
       if (drawn !== e.drawn) {
         e.drawn = drawn;
         if (bodyGroup.current) {
           if (bodyTransform) bodyGroup.current.setAttribute("transform", bodyTransform);
           else bodyGroup.current.removeAttribute("transform");
+          bodyGroup.current.style.opacity = bodyOpacity < 1 ? bodyOpacity.toFixed(3) : "";
         }
+        sides.forEach((s, i) => {
+          const dot = sideDots[i].current;
+          if (!dot) return;
+          dot.setAttribute("cx", s.cx.toFixed(2));
+          dot.setAttribute("cy", s.cy.toFixed(2));
+          dot.setAttribute("r", s.r.toFixed(2));
+          dot.style.opacity = s.r > 0 ? s.opacity.toFixed(3) : "0";
+        });
         placed.forEach((q, i) => {
           const pillEl = pills[i].current;
           if (pillEl) {
@@ -204,36 +228,50 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
     };
   }, []);
 
-  const pointAt = (event: React.PointerEvent<SVGSVGElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const radius = (rect.width * BODY_RADIUS) / VIEW_SPAN;
-    engine.current.pointer = [
-      (event.clientX - (rect.left + rect.width / 2)) / radius,
-      (event.clientY - (rect.top + rect.height / 2)) / radius,
-    ];
-  };
-  const pointer = interactive
-    ? {
-        onPointerEnter: (event: React.PointerEvent<SVGSVGElement>) => {
-          engine.current.hover = true;
-          pointAt(event);
-          wake();
-        },
-        onPointerMove: (event: React.PointerEvent<SVGSVGElement>) => {
-          pointAt(event);
-          wake();
-        },
-        onPointerLeave: () => {
-          engine.current.hover = false;
-          wake();
-        },
-        onPointerDown: () => {
-          if (engine.current.props.reduced) return;
-          engine.current.pressStart = performance.now();
-          wake();
-        },
+  useEffect(() => {
+    const own = svg.current;
+    if (!interactive || !own) return;
+    const region: Element = own.closest(HOVER_REGION) ?? own;
+    const pointAt = (event: PointerEvent) => {
+      const rect = own.getBoundingClientRect();
+      const radius = (rect.width * BODY_RADIUS) / VIEW_SPAN;
+      if (radius <= 0) return;
+      engine.current.pointer = [
+        (event.clientX - (rect.left + rect.width / 2)) / radius,
+        (event.clientY - (rect.top + rect.height / 2)) / radius,
+      ];
+    };
+    const enter = (event: Event) => {
+      engine.current.hover = true;
+      pointAt(event as PointerEvent);
+      wake();
+    };
+    const move = (event: Event) => {
+      pointAt(event as PointerEvent);
+      wake();
+    };
+    const leave = () => {
+      engine.current.hover = false;
+      wake();
+    };
+    region.addEventListener("pointerenter", enter);
+    region.addEventListener("pointermove", move);
+    region.addEventListener("pointerleave", leave);
+    return () => {
+      region.removeEventListener("pointerenter", enter);
+      region.removeEventListener("pointermove", move);
+      region.removeEventListener("pointerleave", leave);
+      engine.current.hover = false;
+    };
+  }, [interactive]);
+
+  const onPointerDown = interactive
+    ? () => {
+        if (engine.current.props.reduced) return;
+        engine.current.pressStart = performance.now();
+        wake();
       }
-    : {};
+    : undefined;
 
   const dimension = typeof size === "number" ? `${size}px` : size;
   const label = title === undefined ? `${silhouette.name} mascot` : title;
@@ -247,11 +285,11 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       width={dimension}
       height={dimension}
       className={className}
-      style={style}
+      style={{ overflow: "visible", ...style }}
       role={label ? "img" : undefined}
       aria-label={label ?? undefined}
       aria-hidden={label ? undefined : true}
-      {...pointer}
+      onPointerDown={onPointerDown}
     >
       <defs>
         <clipPath id={`${uid}-clip`} transform={silhouette.fit || undefined} dangerouslySetInnerHTML={{ __html: silhouette.clip }} />
@@ -275,6 +313,9 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
           ))}
         </g>
       </g>
+      {[0, 1].map((i) => (
+        <circle key={i} ref={sideDots[i]} r={0} fill={fill} style={{ opacity: 0 }} />
+      ))}
     </svg>
   );
 });

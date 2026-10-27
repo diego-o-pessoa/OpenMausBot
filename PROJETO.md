@@ -159,6 +159,32 @@ Mais recente primeiro. Modelo de entrada:
 - **Como verificar:** comando ou passo usado.
 ```
 
+### 2026-10-26 — Mascote age conforme o que o agente está fazendo, igual ao Grok Bot
+- **O quê:** novas medições quadro a quadro dos vídeos em `videos/` (três do Grok, um do nosso), com o corpo,
+  a posição e o tamanho de cada olho e o deslocamento do corpo a cada 100 ms. Com elas:
+  - **inteligente:** o mascote encena a fase real do turno. **Pensando** começa com os três pontinhos do Grok
+    (o corpo encolhe no ponto do meio e o ponto aceso anda esquerda→meio→direita) e depois alterna varreduras
+    olhando para baixo da esquerda para a direita, ovais pensativos e olhinhos de lado. **Lendo/buscando** usa as
+    varreduras para baixo. **Comando** usa olhos grandes de frente, olhadas para cima e olhos que atravessam o
+    corpo. **Escrevendo** usa olhos grandes de frente. **Tela/navegador** usa olhadas para cima e para os lados.
+    Os gestos se alternam sem repetir os últimos três e trocam assim que a fase muda.
+  - **fim do turno:** olhos grandes ("digitando"), sorriso "^^" com pulinho e dois saltos olhando para cima,
+    olhos de frente por 5 s, volta ao repouso. Ferramenta que dá certo no meio do turno não sorri mais.
+  - **hover:** reage com o mouse em qualquer ponto da linha do agente na barra lateral. Os olhos são as
+    pílulas verticais do Grok (antes eram bolinhas) e seguem o cursor em cada eixo.
+  - O corpo pode sair da caixa do avatar nos saltos (`overflow: visible`).
+- **Onde:** `scripts/mascot-clips/measure.py` (mede os vídeos e gera `src/components/mascot-clips.ts`; os vídeos
+  não vão para o git), `src/components/mascot-director.ts` (escolhe e encadeia os gestos),
+  `src/components/sphere-mascot.ts` (rosto, pontinhos, olhar), `src/components/SphereMascot.tsx`,
+  `src/lib/mascot.ts` (`stateForBot` devolve a fase pelo tipo de ferramenta, via `toolActivityKey` de
+  `src/lib/live-activity.ts`), `src/components/Avatar.tsx`, `src/state/store.tsx`, `data-mascot-hover` na linha
+  em `src/components/Sidebar.tsx`, `src/mascot-preview.tsx`.
+- **Como verificar:** `npx vitest run src/components/sphere-mascot.test.ts src/components/mascot-director.test.ts
+  src/components/CursorAvatar.clock.test.ts src/lib/mascot.test.ts`. Visual: `npx vite --port 5287` e abrir
+  `/mascot-preview.html` (palco com botões por fase + linhas para hover), `?solo=done`, `?solo=reading`, `?faces`.
+  Comparado lado a lado com o vídeo do Grok: mesma sequência e tempos (~0,1 s de diferença).
+- **Pendente:** 23 arquivos de teste já falhavam antes desta mudança (os mesmos, conferido com stash).
+
 ### 2026-10-26 — Backup do reinstalar.ps1 não segue junctions
 - **O quê:** o robocopy do backup passou a usar `/XJ`.
 - **Por quê:** as pastas `task-workspaces\...\{.agents,.claude,.grok}\skills\*` são junctions para skills; as que

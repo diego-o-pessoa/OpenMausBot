@@ -1,6 +1,9 @@
 import { botMascotBody, type MascotBodyId } from "../../shared/mascot-bodies";
 import { CURSOR_STATES, type CursorState } from "@/components/CursorAvatar";
 import type { MausColor } from "../../shared/wire";
+import type { LocaleKey } from "@/locales";
+import { toolActivityKey } from "./live-activity";
+import { lastNonReceipt } from "./receipts";
 
 export { MAUS_COLOR_NAMES, type MausColor } from "../../shared/wire";
 
@@ -116,7 +119,8 @@ export const PICKABLE_STATES: MausState[] = [
 
 type MascotMessage = {
   kind: string;
-  tool?: { ok?: boolean };
+  role?: "bot" | "user";
+  tool?: { name?: string; ok?: boolean };
 };
 
 export type MascotBotProfile = {
@@ -130,8 +134,28 @@ export type MascotBotProfile = {
   messages?: MascotMessage[];
 };
 
+const STATE_BY_TOOL: Partial<Record<LocaleKey, MausState>> = {
+  "chat.activity.readFile": "searching",
+  "chat.activity.searchWeb": "searching",
+  "chat.activity.readPage": "searching",
+  "chat.activity.searching": "searching",
+  "chat.activity.writeFile": "writing",
+  "chat.activity.editFile": "writing",
+  "chat.activity.publishPage": "writing",
+  "chat.activity.screen": "radar",
+  "chat.activity.computer": "radar",
+  "chat.activity.openPage": "radar",
+};
+
+/**
+ * What a busy bot is doing right now, from the last message of its turn: thinking until a tool is running,
+ * then reading, writing, looking at a screen or working, by the tool's kind.
+ */
 export function stateForBot(bot: MascotBotProfile): MausState {
-  return bot.busy ? "working" : "idle";
+  if (!bot.busy) return "idle";
+  const last = lastNonReceipt(bot.messages);
+  if (last?.kind !== "activity" || !last.tool?.name || last.tool.ok !== undefined) return "thinking";
+  return STATE_BY_TOOL[toolActivityKey(last.tool.name)] ?? "working";
 }
 
 /** The bodies Grok Bot's mascots wear, in picker order; any other saved body is drawn as a circle. */

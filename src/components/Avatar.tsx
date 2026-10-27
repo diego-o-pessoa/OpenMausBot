@@ -2,7 +2,7 @@ import { forwardRef, memo, useEffect, useImperativeHandle, useRef, useState } fr
 import { MAUS_COLORS, grokBody, type MausColor, type MausMotion, type MausState } from "@/lib/mascot";
 import type { CursorAvatarHandle } from "./CursorAvatar";
 import { SphereMascot, type SphereMascotHandle } from "./SphereMascot";
-import { moodForState } from "./sphere-mascot";
+import { activityForState } from "./sphere-mascot";
 import { avatarCropRadius, botAvatarProfile, clampAvatarFocus, clampAvatarZoom, type BotAvatarCrop } from "../../shared/bot-avatar";
 import { MASCOT_BODIES } from "../../shared/mascot-bodies";
 import { isHalloweenBody, type BotBodyId } from "../../shared/bot-body";
@@ -114,7 +114,7 @@ function FlatAvatarComponent(
     <span className="inline-flex shrink-0">
       <SphereMascot
         ref={inner}
-        mood={moodForState(motionState ?? state)}
+        activity={activityForState(state === "idle" && motionState ? motionState : state)}
         size={size}
         silhouette={silhouette}
         fill={gradient?.[1] ?? MAUS_COLORS[color] ?? MAUS_COLORS.green}

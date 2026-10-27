@@ -1381,7 +1381,7 @@ export function reducer(state: AppState, action: Action): AppState {
             ? action.message.tool?.ok === false
               ? "failure"
               : action.message.tool?.ok === true
-                ? "success"
+                ? null
                 : "working"
             : action.message.role === "bot" && action.message.kind === "text"
               ? "blink"

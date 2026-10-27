@@ -4,8 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MausAvatar, type MausAvatarHandle, type MausAvatarProps } from "./Avatar";
-import { DONE_TRACK } from "./mascot-tracks";
-import { IDLE_FACE, pillPath, trackDurationMs } from "./sphere-mascot";
+import { FINALE_MS } from "./mascot-director";
+import { IDLE_FACE, pillPath } from "./sphere-mascot";
 import { mascotClock } from "./mascot-clock";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -103,7 +103,7 @@ describe("the mascot on the shared clock", () => {
     render([{ state: "idle", animated: false, size: 36 }]);
     run(500);
     expect(mascotClock().pending()).toBe(1);
-    run(trackDurationMs(DONE_TRACK, false) + 1000);
+    run(FINALE_MS + 1000);
     expect(mascotClock().pending()).toBe(0);
   });
 
