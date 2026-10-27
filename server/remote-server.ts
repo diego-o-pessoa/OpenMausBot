@@ -102,11 +102,14 @@ export function remoteScriptCommand(input: { action: RemoteAction; repo: string;
   return `env ${env.join(" ")} bash -s`;
 }
 
+/** Git for Windows checks text out with CRLF under core.autocrlf, and bash on the VPS reads "set -o pipefail\r" as an unknown option. */
+export const unixLineEndings = (script: string) => script.replace(/\r\n?/g, "\n");
+
 const here = dirname(fileURLToPath(import.meta.url));
 /** Beside the bundle in a build; in the repository's deploy folder when the server runs from source. */
 function deployScript(name: string): string {
   for (const candidate of [join(here, name), join(here, "..", "deploy", "remote", name)]) {
-    if (existsSync(candidate)) return readFileSync(candidate, "utf8");
+    if (existsSync(candidate)) return unixLineEndings(readFileSync(candidate, "utf8"));
   }
   throw new Error(`The VPS script ${name} is missing from this build.`);
 }
