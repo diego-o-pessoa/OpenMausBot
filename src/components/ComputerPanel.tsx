@@ -25,6 +25,7 @@ import {
 import { api, ApiError, currentTaskBot, useStore, type Bot, type ConfigStatus } from "@/state/store";
 import { setAdvancedMode, useAdvancedMode } from "@/lib/interface-mode";
 import { ComputerFilesPane } from "./ComputerFilesPane";
+import { ComputerWatchOverlay } from "./ComputerWatchOverlay";
 import { effectivePlace, isComputerPlace, placeLabelKey, placeOffered } from "@/lib/place";
 import type { CloudBackend } from "../../shared/wire";
 import { ApiKeyRow } from "./ApiKeys";
@@ -267,6 +268,7 @@ export function ComputerPanel({
   const [controlPending, setControlPending] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [error, setError] = useState<Error | string | null>(null);
+  const [watching, setWatching] = useState(false);
   const errorText = panelErrorText(error);
   const advanced = useAdvancedMode();
   const [storedPanelView, setPanelView] = useState<ComputerPanelView>(() => readComputerPanelView(bot.id));
@@ -746,6 +748,7 @@ export function ComputerPanel({
 
   useEffect(() => {
     if (panelView !== "computer" || phase !== "vm" || !computerStatusCurrent || viewerOpen || liveHere || !pageVisible) return;
+    const interval = watching ? 1500 : bot.busy ? 3000 : 30_000;
     const controller = new AbortController();
     let inFlight = false;
     let lastAttemptAt = -Infinity;
@@ -753,7 +756,7 @@ export function ComputerPanel({
     let initialAttempt = true;
     const shoot = async () => {
       if (inFlight || controller.signal.aborted) return;
-      if (Date.now() - lastAttemptAt < (retryDelay ?? (bot.busy ? 3000 : 30_000))) return;
+      if (Date.now() - lastAttemptAt < (retryDelay ?? interval)) return;
       inFlight = true;
       retryDelay = null;
       try {
@@ -775,12 +778,12 @@ export function ComputerPanel({
       }
     };
     void shoot();
-    const timer = window.setInterval(() => void shoot(), bot.busy ? 3000 : 30_000);
+    const timer = window.setInterval(() => void shoot(), Math.min(interval, 3000));
     return () => {
       controller.abort();
       window.clearInterval(timer);
     };
-  }, [panelView, phase, computerStatusCurrent, threadPath, viewerOpen, liveHere, pageVisible, bot.busy, setError, setPreviewError, setVmFrame]);
+  }, [panelView, phase, computerStatusCurrent, threadPath, viewerOpen, liveHere, pageVisible, bot.busy, watching, setError, setPreviewError, setVmFrame]);
 
   // The first capture attempt is what makes macOS show the Screen Recording prompt (no reliable pre-grant on macOS
   // 15+), so repeated empty frames mean denied.
@@ -901,7 +904,11 @@ export function ComputerPanel({
     }
   };
 
+  const watchFullScreen = () => setWatching(true);
+  const closeWatch = useCallback(() => setWatching(false), []);
+  useEffect(() => { if (liveHere || panelView !== "computer") setWatching(false); }, [liveHere, panelView]);
   const takeControl = async (expand = false) => {
+    setWatching(false);
     if (!liveTarget) return cloudPreviewReady ? openDesktop() : undefined;
     if (takeover.here) return takeover.setExpanded(expand || takeover.expanded);
     setControlPending(true);
@@ -1331,6 +1338,10 @@ export function ComputerPanel({
             {computerStatusCurrent && bot.computer === "cloud" && cloudBackend === "vps" && (phase === "ready" || phase === "starting") && !liveHere && <span className="text-[11px]">{t("computer.badge.vps")}</span>}
         </div>
         <div className={cn("relative flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-xl bg-card", liveHere && "ring-2 ring-accent")}>
+          {watching && frameSrc && !liveHere && (
+            <ComputerWatchOverlay src={frameSrc} name={bot.name} taking={controlPending}
+              onClose={closeWatch} onTakeControl={() => void takeControl(true)} />
+          )}
           {liveHere && liveTarget ? (
             <Suspense fallback={<Loader2 size={18} className="animate-spin text-ink-secondary" />}>
               <LiveDesktop
@@ -1351,7 +1362,7 @@ export function ComputerPanel({
               starting={phase === "starting"}
               opening={pending === "join"}
               disabled={controlPending}
-              onOpen={() => void takeControl()}
+              onOpen={() => (control.held ? void takeControl() : watchFullScreen())}
               onRetry={(discardFrame) => {
                 lastLiveAt.current = 0;
                 if (discardFrame) setPolledFrame(null);
@@ -1363,11 +1374,11 @@ export function ComputerPanel({
           ) : frameSrc && previewOpensDesktop ? (
             <button
               type="button"
-              onClick={() => void takeControl()}
+              onClick={() => (control.held ? void takeControl() : watchFullScreen())}
               disabled={controlPending || pending === "join"}
               className="group relative flex h-full w-full cursor-pointer items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait"
               aria-label={t("computer.openLiveDesktopAria", { name: bot.name })}
-              title={t("computer.openLiveDesktop")}
+              title={t(control.held ? "computer.openLiveDesktop" : "computer.fullScreen")}
             >
               <img
                 src={frameSrc}
@@ -1376,7 +1387,7 @@ export function ComputerPanel({
               />
               <span className="pointer-events-none absolute right-2 top-2 flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-[11px] font-medium text-white opacity-80 shadow-sm transition group-hover:opacity-100 group-focus-visible:opacity-100">
                 {pending === "join" ? <Loader2 size={12} className="animate-spin" /> : <Maximize2 size={12} />}
-                {t("computer.open")}
+                {t(control.held ? "computer.open" : "computer.fullScreen")}
               </span>
             </button>
           ) : frameSrc ? (
@@ -1629,8 +1640,8 @@ export function ComputerPanel({
             )}
             <button
               type="button"
-              onClick={() => void takeControl(true)}
-              disabled={pending === "join" || (!control.held && controlPending) || (phase === "vm" && !liveTarget)}
+              onClick={() => (control.held ? void takeControl(true) : watchFullScreen())}
+              disabled={pending === "join" || (control.held ? phase === "vm" && !liveTarget : controlPending || !frameSrc)}
               className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-control py-2 text-[13px] text-ink hover:bg-raised-hover disabled:opacity-50"
               title={t("computer.openLiveDesktop")}
             >

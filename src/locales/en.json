@@ -4266,6 +4266,8 @@
   "computer.tab.files": "Files",
   "computer.tabsAria": "Bot panel view",
   "computer.fullScreen": "Full screen",
+  "computer.watching": "Watching {name}'s screen. The bot keeps control.",
+  "computer.closeFullScreen": "Close full screen",
   "computer.browserOff.title": "The browser is off",
   "computer.browserOff.body": "Turn on the built-in browser to watch {name} browse the web, and take over any time.",
   "computer.browserOff.turnOn": "Turn on the browser",

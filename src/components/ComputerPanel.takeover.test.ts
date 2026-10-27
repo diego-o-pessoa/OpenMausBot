@@ -197,12 +197,19 @@ describe("taking control of a Local VM", () => {
     expect(button("Take control")).toBeDefined();
   });
 
-  it("Full screen takes control straight into the whole window", async () => {
+  it("Full screen only watches; Take control inside it takes control into the whole window", async () => {
     await open(makeBot({ computer: "vm" }));
+    await vi.waitFor(() => expect(document.querySelector("img[src='data:image/png;base64,FRAME']")).not.toBeNull());
     await press("Full screen");
+    const watch = document.querySelector<HTMLElement>("[role=dialog]");
+    expect(watch?.querySelector("img")?.getAttribute("src")).toBe("data:image/png;base64,FRAME");
+    expect(fixture.controls, "watching must leave the bot in control").toEqual([]);
+    flushSync(() => [...watch!.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === "Take control")!.click());
+    await settle();
     expect(fixture.controls.map((control) => control.action)).toEqual(["take"]);
     await shownLive();
     expect(liveDesktop()!.dataset.expanded).toBe("true");
+    expect(document.querySelector("[role=dialog]")).toBeNull();
   });
 
   it("closing the panel, leaving its Screen view or closing the page gives back the hold it took", async () => {
