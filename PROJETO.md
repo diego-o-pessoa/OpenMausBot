@@ -159,6 +159,17 @@ Mais recente primeiro. Modelo de entrada:
 - **Como verificar:** comando ou passo usado.
 ```
 
+### 2026-10-26 — Instalador do app de desktop para Linux
+- **O quê:** `instalar-linux.sh --desktop` compila o app de desktop deste fork (`pnpm package:linux`) e
+  instala o `.deb` com `apt` (menu de aplicativos, sandbox do navegador configurado). Sem `--desktop`, o
+  script continua instalando o comando `openmausbot` (servidor + app no navegador). O Linux fica fixo na
+  versão instalada; para atualizar, rodar o instalador de novo. O Windows é atualizado com `reinstalar.ps1`.
+- **Limite:** o `.deb` se recusa a instalar onde o kernel restringe o sandbox mas não há AppArmor
+  carregável (contêineres, como o `agentes`); o instalador detecta isso antes de compilar e avisa.
+- **Onde:** `instalar-linux.sh`.
+- **Como verificar:** rodado no contêiner `agentes` (Ubuntu 26.04): a compilação e o `.deb` saem; a
+  instalação ali é bloqueada pela proteção acima, como esperado. Em Ubuntu de verdade, `dpkg -s openmausbot`.
+
 ### 2026-10-26 — Ajustes do mascote: olhos da varredura, prévia e animação igual em todo lugar
 - **O quê:**
   - Os olhos da varredura para baixo (pensando/lendo) ficaram 15% menores que o medido, a pedido.
