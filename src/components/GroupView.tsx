@@ -33,6 +33,7 @@ import { useAdvancedMode } from "@/lib/interface-mode";
 import { CopyButton, MESSAGE_ROW, MessageActions, messageActionClass, ReplyAction } from "./MessageActions";
 import { ReactAction, ReactionChips, useCanReact } from "./Reactions";
 import { ClusterLabel } from "./RoomClusterLabel";
+import { LiveBotAvatar, useGroupPresenceState } from "./LiveBotAvatar";
 import { roomPin, useBotMessageMenu, userMessageMenu } from "./message-menu";
 import { RawMarkdownView, RawToggleAction } from "./RawMarkdownToggle";
 import { SpeakButton } from "./SpeakButton";
@@ -1213,6 +1214,7 @@ export function GroupView({ group }: { group: Group }) {
   }, [group.messages, threadWorking, group.name, speaker?.name]);
   const presenceSpeaker =
     speaker ?? awaited ?? members.find((member) => member.id === popping?.botId) ?? members[0];
+  const presenceState = useGroupPresenceState(presenceSpeaker, Boolean(toolInFlight && !awaited));
 
   const {
     scrollRef,
@@ -1276,7 +1278,7 @@ export function GroupView({ group }: { group: Group }) {
         )}
       >
         <span className={cn("inline-flex", held && "opacity-50 grayscale")}>
-          <BotAvatar bot={b} state={normalizeState(b.mascotExpression) ?? "happy"} size={24} animated={false} />
+          <LiveBotAvatar bot={b} size={24} />
         </span>
         {held && !busy && (
           <span
@@ -1499,15 +1501,7 @@ export function GroupView({ group }: { group: Group }) {
             <div className="flex flex-1 flex-col items-center justify-center gap-3 py-24 text-center">
               <div className="flex -space-x-2">
                 {members.slice(0, 3).map((b) => (
-                  <BotAvatar
-                    key={b.id}
-                    bot={b}
-                    state="happy"
-                    size={44}
-                    motion="none"
-                    motionKey={0}
-                    animated={false}
-                  />
+                  <LiveBotAvatar key={b.id} bot={b} size={44} />
                 ))}
               </div>
               <div className="text-[17px] font-semibold text-ink">{group.name}</div>
@@ -1547,7 +1541,7 @@ export function GroupView({ group }: { group: Group }) {
           )}
           {(speaker || presenceVisible) && (
             <TurnPresence
-              avatar={<PresenceMascot bot={presenceSpeaker ?? { color: "green" }} state={toolInFlight && !awaited ? "working" : "thinking"} syncKey={`${group.id}:${presenceSpeaker?.id ?? ""}`} />}
+              avatar={<PresenceMascot bot={presenceSpeaker ?? { color: "green" }} state={presenceState} />}
               visible={presenceVisible}
               phrases={activity.phrases}
               phase={activity.phase}
