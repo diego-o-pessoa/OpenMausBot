@@ -51,16 +51,21 @@ describe("activityStepLabel", () => {
 
   it("never shows a step's arguments", () => {
     expect(activityStepLabel({ name: "Bash: rm -rf ~/private" })).toBe("Running a command");
-    expect(activityStepLabel({ name: "make_invoice" })).toBe("Working");
+    expect(activityStepLabel({ name: "make_invoice" })).toBe("Using make invoice");
   });
 
   it("names a step by its tool alone, whatever its arguments say", () => {
-    expect(activityStepLabel({ name: "make_invoice: read the file" })).toBe("Working");
+    expect(activityStepLabel({ name: "make_invoice: read the file" })).toBe("Using make invoice");
   });
 
-  // "Edit" and "editing a file" read the same, so only these cases tell narration from a name-derived label.
-  it("prefers the narration to the label the tool's name would give", () => {
-    expect(activityStepLabel({ name: "Bash", spoken: "checking the build." })).toBe("Checking the build");
+  it("labels a named tool in the person's language, not with the server's spoken English", () => {
+    expect(activityStepLabel({ name: "Bash", spoken: "checking the build." })).toBe("Running a command");
+    expect(activityStepLabel({ name: "clipboard_read", spoken: "running clipboard_read" })).toBe("Reading the clipboard");
+  });
+
+  it("says the narration when the step has no tool name, only a sentence", () => {
+    expect(activityStepLabel({ name: "Kiwi is finishing another conversation — will reply here when free", spoken: "Kiwi is finishing another conversation" }))
+      .toBe("Kiwi is finishing another conversation");
   });
 
   it("falls back to the tool's name when the narration is blank", () => {
@@ -89,9 +94,16 @@ describe("liveActivityPhrases", () => {
   });
 
   it("never rotates the server's exact narration", () => {
-    const narrated = liveActivityPhrases(activity("Bash", { spoken: "running the test suite" }));
+    const narrated = liveActivityPhrases(activity("Kiwi is finishing another conversation", { spoken: "running the test suite" }));
     expect(narrated.phrases).toEqual(["Running the test suite"]);
     expect(narrated.phase).toBe("spoken:running the test suite");
+  });
+
+  it("says which kind of program a step uses", () => {
+    expect(liveActivityPhrases(activity("clipboard_read")).kind).toBe("clipboard");
+    expect(liveActivityPhrases(activity("Bash: pnpm test")).kind).toBe("terminal");
+    expect(liveActivityPhrases(activity("mcp__tomticket__list_tickets"))).toMatchObject({ kind: "ticket", phrases: ["Using list tickets"] });
+    expect(liveActivityPhrases().kind).toBe("think");
   });
 });
 

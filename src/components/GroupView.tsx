@@ -1545,6 +1545,7 @@ export function GroupView({ group }: { group: Group }) {
               visible={presenceVisible}
               phrases={activity.phrases}
               phase={activity.phase}
+              kind={activity.kind}
               seed={`${group.id}:${group.turnStartedAt ?? ""}:${speaker?.id ?? ""}`}
               answering={popping !== null}
               since={speaker ? group.turnStartedAt ?? null : null}

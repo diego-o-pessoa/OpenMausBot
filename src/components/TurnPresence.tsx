@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { WorkingTimer } from "@/components/WorkingIndicator";
-import { phraseAt, phraseHoldMs } from "@/lib/live-activity";
+import { phraseAt, phraseHoldMs, type ActivityKind } from "@/lib/live-activity";
+import { ActivityKindIcon } from "./ActivityKindIcon";
 
 const FADE_MS = 320;
 
@@ -59,6 +60,7 @@ export function TurnPresence({
   seed = "",
   answering = false,
   since = null,
+  kind = "think",
 }: {
   avatar: ReactNode;
   visible: boolean;
@@ -68,6 +70,7 @@ export function TurnPresence({
   seed?: string;
   answering?: boolean;
   since?: number | null;
+  kind?: ActivityKind;
 }) {
   const [mounted, setMounted] = useState(visible);
   const [presencePhase, setPhase] = useState<"think" | "answer" | "out">(answering ? "answer" : "think");
@@ -108,6 +111,7 @@ export function TurnPresence({
         {avatar}
         {showWorking ? (
           <span className="flex items-baseline gap-2 leading-none">
+            <ActivityKindIcon kind={kind} className="self-center" />
             <span className="turn-phrase relative grid text-[13px]">
               {previous !== null && previous !== current && (
                 <ShimmerPhrase

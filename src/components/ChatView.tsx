@@ -1355,6 +1355,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
             visible={presenceVisible}
             phrases={activity.phrases}
             phase={activity.phase}
+            kind={activity.kind}
             seed={`${bot.id}:${bot.threadId ?? ""}:${busySince ?? ""}`}
             answering={popping !== null}
             since={busySince}
