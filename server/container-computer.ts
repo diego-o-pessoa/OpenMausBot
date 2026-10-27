@@ -1145,19 +1145,23 @@ const defaultExecRunner: ContainerExecRunner = async (command, args, options) =>
 };
 
 /** The limit is enforced inside the container, so a runaway process is really stopped. */
+export function execRequestSeconds(command: string, timeoutSeconds: number | undefined): number {
+  if (!command.trim()) throw Object.assign(new Error("command is required"), { status: 400 });
+  if (command.length > 20_000) throw Object.assign(new Error("command is too long"), { status: 400 });
+  if (timeoutSeconds !== undefined && !Number.isFinite(timeoutSeconds)) {
+    throw Object.assign(new Error("timeout_seconds must be finite"), { status: 400 });
+  }
+  return Math.min(Math.max(Math.floor(timeoutSeconds ?? EXEC_DEFAULT_SECONDS), 1), EXEC_MAX_SECONDS);
+}
+
 export async function containerExec(
   target: LocalVmTarget,
   command: string,
   options: { timeoutSeconds?: number; runtime?: Runtime; exec?: ContainerExecRunner } = {},
 ): Promise<ContainerExecResult> {
-  if (!command.trim()) throw Object.assign(new Error("command is required"), { status: 400 });
-  if (command.length > 20_000) throw Object.assign(new Error("command is too long"), { status: 400 });
-  if (options.timeoutSeconds !== undefined && !Number.isFinite(options.timeoutSeconds)) {
-    throw Object.assign(new Error("timeout_seconds must be finite"), { status: 400 });
-  }
+  const seconds = execRequestSeconds(command, options.timeoutSeconds);
   const runtime = options.runtime ?? (await containerRuntimeStatus()).runtime;
   if (!runtime) throw Object.assign(new Error("No container runtime is available for the Local VM"), { status: 409 });
-  const seconds = Math.min(Math.max(Math.floor(options.timeoutSeconds ?? EXEC_DEFAULT_SECONDS), 1), EXEC_MAX_SECONDS);
   const result = await (options.exec ?? defaultExecRunner)(
     runtime,
     [

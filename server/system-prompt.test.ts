@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { soulSystemPrompt } from "./bot-folder.ts";
 import { BUILT_IN_BROWSER_SYSTEM_PROMPT } from "./browser-engine.ts";
 import {
+  AUTONOMY_PROMPT,
   longCommandsPrompt,
   buildSystemPrompt,
   CONVERSATIONAL_STYLE_PROMPT,
@@ -95,7 +96,7 @@ describe("buildSystemPrompt", () => {
     expect(built.text).toContain("likes tea");
     expect(built.text).toContain("@Fig");
 
-    expect(built.stable).toBe("You are Kiwi. Search past sessions.");
+    expect(built.stable).toBe(`You are Kiwi.${AUTONOMY_PROMPT} Search past sessions.`);
     expect(built.volatile).toContain("likes tea");
     expect(built.volatile).toContain("@Fig");
     expect(built.volatile).toContain("today 20:48");
@@ -111,7 +112,7 @@ describe("buildSystemPrompt", () => {
     ]);
     expect(built.volatile).toContain("Use the deploy skill.");
     expect(built.volatile).toContain(ROUTINE_EXECUTION_PROMPT);
-    expect(built.stable).toBe(`You are Kiwi. Set yourself up.${WEBHOOK_PROMPT}`);
+    expect(built.stable).toBe(`You are Kiwi. Set yourself up.${AUTONOMY_PROMPT}${WEBHOOK_PROMPT}`);
   });
 
   it("has an empty volatile half when nothing mid-conversation is present", () => {
@@ -120,10 +121,13 @@ describe("buildSystemPrompt", () => {
     expect(built.stable).toBe(built.text);
   });
 
-  it("is the persona alone when there is no soul and no parts", () => {
+  it("is the persona and the rule to work on its own when there is no soul and no parts", () => {
     const built = buildSystemPrompt("You are Kiwi.", "", []);
-    expect(built.text).toBe("You are Kiwi.");
-    expect(built.sections).toEqual([{ id: "persona", label: "Identity", text: "You are Kiwi.", bytes: 13 }]);
+    expect(built.text).toBe(`You are Kiwi.${AUTONOMY_PROMPT}`);
+    expect(built.sections).toEqual([
+      { id: "persona", label: "Identity", text: "You are Kiwi.", bytes: 13 },
+      { id: "autonomy", label: "Working on your own", text: AUTONOMY_PROMPT, bytes: Buffer.byteLength(AUTONOMY_PROMPT, "utf8") },
+    ]);
   });
 
   it("concatenates parts in order and drops empty ones, so an empty soul changes nothing", () => {
@@ -133,19 +137,19 @@ describe("buildSystemPrompt", () => {
       { id: "memory", label: "Memory", text: " Your memory file is X." },
     ];
     const built = buildSystemPrompt("You are Kiwi.", "", parts);
-    expect(built.text).toBe("You are Kiwi. You can act on the computer. Your memory file is X.");
-    expect(built.sections.map((s) => s.id)).toEqual(["persona", "computer", "memory"]);
+    expect(built.text).toBe(`You are Kiwi.${AUTONOMY_PROMPT} You can act on the computer. Your memory file is X.`);
+    expect(built.sections.map((s) => s.id)).toEqual(["persona", "autonomy", "computer", "memory"]);
   });
 
   it("puts the soul block directly after the persona and measures it in bytes", () => {
     const built = buildSystemPrompt("You are Kiwi.", "Be brief. é", [
       { id: "memory", label: "Memory", text: " Your memory file is X." },
     ]);
-    expect(built.sections.map((s) => s.id)).toEqual(["persona", "soul", "memory"]);
+    expect(built.sections.map((s) => s.id)).toEqual(["persona", "soul", "autonomy", "memory"]);
     const soul = built.sections[1]!;
     expect(soul.text).toBe(soulSystemPrompt("Be brief. é"));
     expect(soul.bytes).toBe(Buffer.byteLength(soul.text, "utf8"));
-    expect(built.text).toBe("You are Kiwi." + soul.text + " Your memory file is X.");
+    expect(built.text).toBe("You are Kiwi." + soul.text + AUTONOMY_PROMPT + " Your memory file is X.");
   });
 });
 
@@ -388,7 +392,7 @@ describe("reply style", () => {
       { id: "memory", label: "Memory", text: " memory" },
       { id: "x", label: "X", text: " tail" },
     ], undefined, { replyStyle: "conversational" });
-    expect(built.sections.map((s) => s.id)).toEqual(["persona", "soul", "reply-style", "memory", "x"]);
+    expect(built.sections.map((s) => s.id)).toEqual(["persona", "soul", "reply-style", "autonomy", "memory", "x"]);
     expect(built.stable).toContain(CONVERSATIONAL_STYLE_PROMPT);
     expect(built.volatile).not.toContain("Reply style");
     expect(CONVERSATIONAL_STYLE_PROMPT).toMatch(/short/i);
@@ -396,4 +400,33 @@ describe("reply style", () => {
     expect(CONVERSATIONAL_STYLE_PROMPT).toMatch(/code block/);
     expect(CONVERSATIONAL_STYLE_PROMPT).toMatch(/language/);
   });
+});
+
+describe("working on its own", () => {
+  it("tells every turn to get what is missing itself, try alternatives and act on a correction now", () => {
+    expect(AUTONOMY_PROMPT).toMatch(/install it/);
+    expect(AUTONOMY_PROMPT).toMatch(/alternatives/);
+    expect(AUTONOMY_PROMPT).toMatch(/do not only acknowledge it or save it to memory/);
+    expect(AUTONOMY_PROMPT).toMatch(/standing instructions or the person tell you to/);
+    for (const persona of ["You are Kiwi.", "persona"]) {
+      expect(buildSystemPrompt(persona, "", []).text).toContain(AUTONOMY_PROMPT);
+    }
+  });
+
+  it("gives the VPS the same command tool as a Local VM, and a way to install without root", () => {
+    for (const kind of ["vps", "vm-private", "vm-shared"] as const) {
+      expect(computerPrompt(kind)).toContain("vm_exec");
+      expect(computerPrompt(kind)).toMatch(/sudo apt-get install -y/);
+      expect(computerPrompt(kind)).toMatch(/portable Linux build/);
+    }
+  });
+});
+
+it("keeps setup right after the standing instructions it overrides, and the rule to work on its own after it", () => {
+  const built = buildSystemPrompt("You are Kiwi.", "Be brief.", [
+    { id: "user-profile", label: "About the user", text: "" },
+    { id: "setup", label: "Setup", text: " Set yourself up." },
+    { id: "memory", label: "Memory", text: " memory" },
+  ]);
+  expect(built.sections.map((s) => s.id)).toEqual(["persona", "soul", "setup", "autonomy", "memory"]);
 });

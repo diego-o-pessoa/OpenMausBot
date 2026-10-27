@@ -141,6 +141,16 @@ managed container; the switch is deliberately off by default.
 Each turn checks the container when it starts, because the computer tools connect into the running container
 the moment the engine launches them. Turns that start together share one check instead of queueing one each.
 
+## Commands and installing programs
+
+A bot runs shell commands in its VPS container with `vm_exec`, the same tool a Local VM has: as the desktop
+user `cua`, starting in `/home/cua/workspace`, with the exit code and output returned as text, and the time
+limit (60 seconds by default, at most 300) enforced inside the container. The call waits for the desktop
+like any computer call, so it never runs during another turn's hold. The container drops every capability
+except switching user, so `sudo apt-get` may be refused; bots are told to install in their home folder instead,
+from a vendor's portable Linux build, a `.deb` unpacked with `dpkg -x`, or `pip install --user`. Anything
+installed there is lost when the container is recreated.
+
 ## Several turns at once
 
 Each bot has one container, but the container is not the bottleneck — the desktop inside it is. Any number of

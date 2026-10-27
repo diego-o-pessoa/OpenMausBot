@@ -9,6 +9,11 @@ import {
   CUA_SOCKET,
   IMAGE as CUA_IMAGE,
   cuaExecArgs,
+  clipExecOutput,
+  DISPLAY,
+  execRequestSeconds,
+  VM_WORKSPACE_GUEST,
+  type ContainerExecResult,
   dockerSecurityIsHardened,
   imageLabelsMatch,
   managedImageDockerfile,
@@ -1246,6 +1251,48 @@ export function vpsContainerMcpArgs(alias: string, containerName: string): strin
     alias,
     cuaExecArgs(["mcp", "--socket", CUA_SOCKET], { container: containerName, interactive: true }),
   );
+}
+
+const EXIT_MARKER = "__openmausbot_exit__=";
+
+// The runner treats any non-zero exit as a transport failure, so the guest prints the command's own exit code last on stderr.
+export async function vpsContainerExec(
+  cfg: AppConfig,
+  containerRef: string,
+  command: string,
+  options: { timeoutSeconds?: number; runner?: VpsCommandRunner } = {},
+): Promise<ContainerExecResult> {
+  const seconds = execRequestSeconds(command, options.timeoutSeconds);
+  const alias = vpsSshAlias(cfg);
+  if (!alias) throw Object.assign(new Error("VPS is not configured"), { status: 409 });
+  if (!CONTAINER_NAME.test(containerRef) && !CONTAINER_ID.test(containerRef)) throw new Error("invalid VPS container");
+  const args = vpsDockerArgs(alias, [
+    "exec",
+    "-u", "cua",
+    "-w", VM_WORKSPACE_GUEST,
+    "-e", "HOME=/home/cua",
+    "-e", `DISPLAY=${DISPLAY}`,
+    containerRef,
+    "sh", "-c", `timeout -k 5 "$0" sh -lc "$1"; echo "${EXIT_MARKER}$?" >&2`,
+    String(seconds),
+    command,
+  ]);
+  let output: { stdout: string; stderr: string };
+  try {
+    output = await (options.runner ?? defaultRunner)(args, { timeoutMs: (seconds + 20) * 1000 });
+  } catch (error) {
+    throw Object.assign(new Error(`Could not reach the VPS computer: ${error instanceof Error ? error.message : String(error)}`), { status: 502 });
+  }
+  const at = output.stderr.lastIndexOf(EXIT_MARKER);
+  if (at < 0) throw Object.assign(new Error("The VPS computer did not report how the command ended."), { status: 502 });
+  const exitCode = Number.parseInt(output.stderr.slice(at + EXIT_MARKER.length), 10);
+  const stderr = output.stderr.slice(0, at);
+  return {
+    exitCode: Number.isFinite(exitCode) ? exitCode : 1,
+    stdout: clipExecOutput(output.stdout),
+    stderr: clipExecOutput(stderr),
+    timedOut: exitCode === 124 || exitCode === 137,
+  };
 }
 
 export function vpsComputerMcp(cfg: AppConfig, botId: string, containerRef?: string): {
