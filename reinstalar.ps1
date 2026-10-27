@@ -53,6 +53,7 @@ if (Test-Path -LiteralPath $dados) {
     & robocopy.exe $dados $destino /E /XJ /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
     # robocopy: 0-7 is success, 8 or more is failure.
     if ($LASTEXITCODE -ge 8) { throw "O backup falhou (robocopy $LASTEXITCODE). Nada foi instalado." }
+    $global:LASTEXITCODE = 0
     Get-ChildItem -LiteralPath $backups -Directory | Sort-Object Name -Descending | Select-Object -Skip 5 | Remove-Item -Recurse -Force
 }
 
