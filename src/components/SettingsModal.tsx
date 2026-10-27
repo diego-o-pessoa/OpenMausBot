@@ -51,6 +51,7 @@ import { ThreadCleanupSettings } from "./ThreadCleanupSettings";
 import { DefaultBotSettings } from "./NewBotDialog";
 import { WorkspaceBackupSettings } from "./WorkspaceBackupSettings";
 import { WorkspaceSourceSettings } from "./WorkspaceSourceSettings";
+import { RemoteServerSettings } from "./RemoteServerSettings";
 import { CompanyBackupSettings } from "./CompanyBackupSettings";
 import { ImportSettings } from "./ImportSettings";
 import { cn } from "@/lib/cn";
@@ -770,6 +771,7 @@ export function SettingsModal() {
         const computerPairs = currentPhonePairingTarget(state.config?.cloudHome === true) === "computer";
         return (
           <>
+            {!remoteActive && <RemoteServerSettings />}
             <RemoteComputerSection />
             {!remoteActive && <CustomDomainSettings />}
             {/* Security: the server decides who may pair (an owner or admin session), not this gate. */}

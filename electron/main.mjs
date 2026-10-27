@@ -81,6 +81,7 @@ import {
 } from "./companion-account-service.mjs";
 import capabilitiesModule from "./capabilities.cjs";
 import environmentsModule from "./environments.cjs";
+import { createServerTunnels } from "./server-tunnels.mjs";
 import localOriginModule from "./local-origin.cjs";
 import { buildApplicationMenu } from "./menu.mjs";
 import { createComputerSharing, isHomeFolder, validateSharedFolders } from "./computer-sharing.mjs";
@@ -1511,8 +1512,26 @@ ipcMain.on("desktop:unread-count", (event, value) => {
   applyUnreadBadge(sender);
 });
 
-const { LOCAL_ID, activeEnvironment, activeRemote, allowedOrigins, bootEnvironmentDir, otherPlaces, parseHostedWorkspaceLink, startupEnvironmentDir, withActive, withEnvironment, withEnvironmentLook, withLocalEnvironment, withMicrophone, withoutEnvironment, withTeam, placesMenuOptions, workspaceMenuTemplate, workspaceNavigationAllowed, workspaceSenderAllowed, workspaceSummary, workspaceWindowTitle } = environmentsModule;
+const { LOCAL_ID, activeEnvironment, activeRemote, allowedOrigins, bootEnvironmentDir, otherPlaces, parseHostedWorkspaceLink, startupEnvironmentDir, withActive, withEnvironment, withEnvironmentLook, withLocalEnvironment, withMicrophone, withoutEnvironment, withTeam, withTunneledEnvironment, placesMenuOptions, workspaceMenuTemplate, workspaceNavigationAllowed, workspaceSenderAllowed, workspaceSummary, workspaceWindowTitle } = environmentsModule;
 let environmentsState = { environments: [], activeId: LOCAL_ID };
+const serverTunnels = createServerTunnels({ log: (line) => slog(line) });
+
+function tunnelFailurePage(entry, error) {
+  const message = escapeHtml(error instanceof Error ? error.message : String(error));
+  const name = escapeHtml(entry.name ?? entry.tunnel?.alias ?? "VPS");
+  return `data:text/html;charset=utf-8,${encodeURIComponent(`<!doctype html><meta charset="utf-8"><title>${name}</title><body style="font:15px system-ui;padding:40px;max-width:640px"><h2>${name} is not reachable</h2><p>${message}</p><p>The server keeps running on the VPS. Check your internet connection and SSH access, then reopen it from the Server menu, or choose This computer there.</p></body>`)}`;
+}
+
+async function remoteUrlFor(entry, url) {
+  if (!entry?.tunnel) return url;
+  try {
+    await serverTunnels.ensure(entry.tunnel);
+    return url;
+  } catch (error) {
+    slog(`server tunnel: ${error?.message ?? error}`);
+    return tunnelFailurePage(entry, error);
+  }
+}
 let computerSharing;
 const sharingPrompts = new Set();
 
@@ -1781,7 +1800,7 @@ async function switchEnvironment(id) {
     }
   }
   persistEnvironments(withActive(environmentsState, id));
-  navigateMainWindow(activeOrigin());
+  navigateMainWindow(await remoteUrlFor(entry, activeOrigin()));
 }
 
 function createLocalEnvironment(name, dataDir) {
@@ -2328,7 +2347,7 @@ function createWindow({ deferNavigation = false } = {}) {
   if (desktopRemoteAccess) {
     win.loadURL(serverReady ? `http://127.0.0.1:${SERVER_PORT}` : buildErrorPage({ allPortsOccupied: serverStartConflictOnly }));
   } else if (remote) {
-    void win.loadURL(remote.origin).catch(() => {});
+    void remoteUrlFor(remote, remote.origin).then((url) => win.isDestroyed() ? null : win.loadURL(url)).catch(() => {});
   } else if (app.isPackaged) {
     win.loadURL(serverReady ? `http://127.0.0.1:${SERVER_PORT}` : buildErrorPage({ allPortsOccupied: serverStartConflictOnly }));
   } else {
@@ -2858,6 +2877,23 @@ ipcMain.handle("environments:pick-dir", localWorkspaceOnly("environments:pick-di
 ipcMain.handle("environments:add-from-link", localWorkspaceOnly("environments:add-from-link", (_event, link, name) => {
   return connectHostedWorkspace(link, typeof name === "string" ? name : undefined);
 }));
+ipcMain.handle("environments:add-vps-server", localWorkspaceOnly("environments:add-vps-server", async (_event, input) => {
+  const added = withTunneledEnvironment(environmentsState, {
+    alias: typeof input?.alias === "string" ? input.alias : "",
+    remotePort: Number(input?.remotePort),
+    name: typeof input?.name === "string" ? input.name : undefined,
+  }, () => randomUUID());
+  if (!added) return { ok: false, error: "Enter a valid SSH alias and port." };
+  const code = typeof input?.code === "string" && /^[A-Za-z0-9-]{4,64}$/.test(input.code) ? input.code : null;
+  try {
+    await serverTunnels.ensure(added.entry.tunnel);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+  persistEnvironments(withActive(added.state, added.entry.id));
+  navigateMainWindow(code ? `${added.entry.origin}/pair#code=${encodeURIComponent(code)}` : added.entry.origin);
+  return { ok: true, id: added.entry.id, origin: added.entry.origin };
+}));
 ipcMain.handle("environments:forget", localWorkspaceOnly("environments:forget", (_event, id, purge) => forgetEnvironment(typeof id === "string" ? id : "", purge === true)));
 
 // A cloud page may open the native chooser, never choose a destination or edit the saved list.
@@ -3315,5 +3351,6 @@ function releaseDesktopDataDirLease() {
 
 // before-quit is too early (this app defers it); will-quit is Electron's last boundary, and the process hook covers app.exit().
 app.on("will-quit", releaseDesktopDataDirLease);
+app.on("will-quit", () => serverTunnels.stopAll());
 app.on("will-quit", () => desktopTray?.destroy());
 process.once("exit", releaseDesktopDataDirLease);

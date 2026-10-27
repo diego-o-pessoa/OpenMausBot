@@ -459,3 +459,22 @@ test("the session's teams become saved places, named and roled as the Admin says
   const saved = { environments: [{ id: "s", kind: "remote", name: "Acme (saved by hand)", origin: TEAM }], activeId: "s" };
   assert.deepEqual(env.reconcileTeams(saved, [acme()], makeId, home).state.environments, [{ id: "s", kind: "remote", name: "Acme", origin: TEAM, team: { id: "team-acme", role: "admin" } }], "a server saved by hand at the team's address becomes the team's entry");
 });
+
+test("a VPS server keeps one entry and loopback port per SSH alias, and its tunnel survives a reload", () => {
+  let n = 0;
+  const makeId = () => `id-${++n}`;
+  const first = env.withTunneledEnvironment({ environments: [], activeId: env.LOCAL_ID }, { alias: "minha-vps", remotePort: 8799, name: "VPS" }, makeId);
+  assert.deepEqual(first.entry, { id: "id-1", kind: "remote", name: "VPS", origin: "http://127.0.0.1:38800", tunnel: { alias: "minha-vps", localPort: 38800, remotePort: 8799 } });
+  const again = env.withTunneledEnvironment(first.state, { alias: "minha-vps", remotePort: 8799 }, makeId);
+  assert.equal(again.state.environments.length, 1);
+  assert.equal(again.entry.tunnel.localPort, 38800);
+  const second = env.withTunneledEnvironment(again.state, { alias: "outra-vps", remotePort: 8799 }, makeId);
+  assert.equal(second.entry.tunnel.localPort, 38801);
+  const reloaded = env.parseEnvironments(env.serializeEnvironments(second.state));
+  assert.deepEqual(reloaded.environments.map((entry) => entry.tunnel), [first.entry.tunnel, second.entry.tunnel]);
+  for (const bad of [{ alias: "-oProxyCommand=x", remotePort: 8799 }, { alias: "vps", remotePort: 0 }]) {
+    assert.equal(env.withTunneledEnvironment(first.state, bad, makeId), null);
+  }
+  const forged = env.parseEnvironments({ version: 2, environments: [{ id: "x", kind: "remote", origin: "https://evil.example", tunnel: { alias: "vps", localPort: 38800, remotePort: 8799 } }] });
+  assert.equal(forged.environments[0].tunnel, undefined);
+});

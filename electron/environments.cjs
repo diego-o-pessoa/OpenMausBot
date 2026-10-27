@@ -308,11 +308,44 @@ function parseEnvironments(raw) {
     seen.add(id);
     seen.add(origin);
     const color = cleanColor(entry?.color), team = entry?.home === true ? null : cleanTeam(entry?.team);
+    const tunnel = cleanTunnel(entry?.tunnel, origin);
     environments.push({ id, kind: "remote", name: cleanName(entry?.name, nameFromOrigin(origin)), origin, ...(entry?.microphone === true ? { microphone: true } : {}),
-      ...(color ? { color } : {}), ...(entry?.home === true ? { home: true } : {}), ...(team ? { team } : {}) });
+      ...(color ? { color } : {}), ...(entry?.home === true ? { home: true } : {}), ...(team ? { team } : {}), ...(tunnel ? { tunnel } : {}) });
   }
   const activeId = typeof value?.activeId === "string" && environments.some((e) => e.id === value.activeId) ? value.activeId : LOCAL_ID;
   return { environments, activeId };
+}
+
+const SSH_ALIAS = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/;
+const TUNNEL_PORTS = Object.freeze({ first: 38800, last: 38899 });
+const validPort = (value) => Number.isInteger(value) && value >= 1 && value <= 65535;
+
+function cleanTunnel(value, origin) {
+  if (!value || typeof value !== "object" || !SSH_ALIAS.test(value.alias ?? "")) return null;
+  if (!validPort(value.localPort) || !validPort(value.remotePort)) return null;
+  if (origin !== `http://127.0.0.1:${value.localPort}`) return null;
+  return { alias: value.alias, localPort: value.localPort, remotePort: value.remotePort };
+}
+
+function freeTunnelPort(state) {
+  const used = new Set(state.environments.map((entry) => entry.tunnel?.localPort).filter(Boolean));
+  for (let port = TUNNEL_PORTS.first; port <= TUNNEL_PORTS.last; port++) if (!used.has(port)) return port;
+  return null;
+}
+
+function withTunneledEnvironment(state, { alias, remotePort, name }, makeId) {
+  if (!SSH_ALIAS.test(alias ?? "") || !validPort(remotePort)) return null;
+  const existing = state.environments.find((entry) => entry.tunnel?.alias === alias);
+  const localPort = existing?.tunnel.localPort ?? freeTunnelPort(state);
+  if (!localPort) return null;
+  const origin = `http://127.0.0.1:${localPort}`;
+  const tunnel = { alias, localPort, remotePort };
+  if (existing) {
+    const environments = state.environments.map((entry) => (entry === existing ? { ...entry, name: cleanName(name, entry.name), origin, tunnel } : entry));
+    return { state: { ...state, environments }, entry: environments.find((entry) => entry.id === existing.id) };
+  }
+  const entry = { id: makeId(), kind: "remote", name: cleanName(name, alias), origin, tunnel };
+  return { state: { ...state, environments: [...state.environments, entry] }, entry };
 }
 
 function serializeEnvironments(state) {
@@ -429,6 +462,7 @@ module.exports = {
   withEnvironment,
   withEnvironmentLook,
   withLocalEnvironment,
+  withTunneledEnvironment,
   withMicrophone,
   withoutEnvironment,
   workspaceMenuTemplate,
