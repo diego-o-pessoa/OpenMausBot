@@ -2,7 +2,7 @@ import { Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { SidebarDensity } from "@/lib/sidebar-preferences";
 import type { Bot } from "@/state/store";
-import { BotAvatar } from "./Avatar";
+import { LiveBotAvatar } from "./LiveBotAvatar";
 
 export function StackedMauses({ members, density, large = false }: { members: Bot[]; density: SidebarDensity; large?: boolean }) {
   const iconOnly = density === "icons";
@@ -12,7 +12,7 @@ export function StackedMauses({ members, density, large = false }: { members: Bo
     const b = members[0];
     return (
       <div className={cn("flex shrink-0 items-center justify-center", slotSize)}>
-        {b ? <BotAvatar bot={b} state="happy" size={singleSize} animated={false} /> : <Users size={24} className="text-ink-secondary" />}
+        {b ? <LiveBotAvatar bot={b} size={singleSize} /> : <Users size={24} className="text-ink-secondary" />}
       </div>
     );
   }
@@ -37,7 +37,7 @@ export function StackedMauses({ members, density, large = false }: { members: Bo
             }}
           >
             <span className="absolute" style={{ left: (ball - avatar) / 2, top: (ball - avatar) / 2 }}>
-              <BotAvatar bot={b} state="idle" size={avatar} animated={false} trackPointer={false} />
+              <LiveBotAvatar bot={b} size={avatar} />
             </span>
           </span>
         ))}
