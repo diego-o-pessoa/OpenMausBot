@@ -145,7 +145,7 @@ function Gallery() {
         <h2>Thinking</h2>
         <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
           <ThinkingDots color={MAUS_COLORS.orange} />
-          <PresenceMascot bot={{ name: "Sales Outbound", color: "orange" }} working={working} />
+          <PresenceMascot bot={{ name: "Sales Outbound", color: "orange" }} state={working ? "working" : "thinking"} />
         </div>
       </section>
     </main>

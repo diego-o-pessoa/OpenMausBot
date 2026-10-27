@@ -161,6 +161,11 @@ export function trackFaceAt(track: readonly TrackSample[], elapsed: number): Fac
   return mixFace(faceFromSample(track[i]), faceFromSample(track[i + 1]), (t - i * TRACK_STEP_MS) / TRACK_STEP_MS);
 }
 
+export function scaleEyes(face: Face, k: number): Face {
+  const sized = (e: Eye): Eye => ({ ...e, length: e.length * k, width: e.width * k });
+  return { ...face, eyes: [sized(face.eyes[0]), sized(face.eyes[1])] };
+}
+
 /** How far the eyes travel, in body radii, when the pointer is off to one side, and above or below. */
 export const LOOK_REACH_X = 0.31;
 export const LOOK_REACH_Y = 0.23;

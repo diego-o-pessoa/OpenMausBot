@@ -3,7 +3,7 @@ import React, { useEffect, useId, useMemo, useRef } from "react";
 import type { CursorAvatarHandle, CursorSilhouette } from "./CursorAvatar";
 import { FACE_BOX } from "./cursor-face-data";
 import { mascotClock, usePrefersReducedMotion, type MascotTicket } from "./mascot-clock";
-import { MascotDirector } from "./mascot-director";
+import { leaseDirector, type MascotDirector } from "./mascot-director";
 import { FULL_FRAME_MS, VIEW_SPAN } from "./mascot-motion";
 import { PRESS_TRACK } from "./mascot-tracks";
 import {
@@ -37,6 +37,8 @@ const HOVER_REGION = "[data-mascot-hover]";
 
 export interface SphereMascotProps {
   activity?: MascotActivity;
+  /** Mascots with the same key (the agent's id) share one performance and move in step. */
+  syncKey?: string;
   /** Holds one face, for previews and tests. */
   face?: Face;
   size?: number | string;
@@ -55,7 +57,7 @@ export interface SphereMascotHandle extends CursorAvatarHandle {
 }
 
 export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotProps>(function SphereMascot(
-  { activity = "idle", face, size = 160, fill, silhouette, paused = false, interactive = true, eyeColor = "#ffffff", title, className, style },
+  { activity = "idle", syncKey, face, size = 160, fill, silhouette, paused = false, interactive = true, eyeColor = "#ffffff", title, className, style },
   ref,
 ) {
   const reactId = useId();
@@ -73,7 +75,7 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
   const engine = useRef({
     props: { activity, pinned: face, paused, reduced, interactive, sizePx, centre },
     face: face ?? (activity === "idle" ? IDLE_FACE : STILL_WORKING_FACE),
-    director: new MascotDirector(),
+    director: null as MascotDirector | null,
     pressStart: null as number | null,
     blinkStart: null as number | null,
     hover: false,
@@ -101,7 +103,7 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       celebrate: () => {
         const e = engine.current;
         if (e.props.reduced) return;
-        e.director.celebrate(performance.now(), e.face);
+        e.director?.celebrate(performance.now(), e.face);
         wake();
       },
     }),
@@ -109,12 +111,20 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
   );
 
   useEffect(() => {
+    const lease = leaseDirector(syncKey);
+    engine.current.director = lease.director;
+    return () => {
+      lease.release();
+      engine.current.director = null;
+    };
+  }, [syncKey]);
+
+  useEffect(() => {
     const e = engine.current;
-    if (reduced) e.director = new MascotDirector();
-    else e.director.setActivity(activity, performance.now(), e.face);
+    if (!reduced) e.director?.setActivity(activity, performance.now(), e.face);
     e.drawn = "";
     wake();
-  }, [activity, face, paused, reduced, interactive, sizePx, silhouette]);
+  }, [activity, syncKey, face, paused, reduced, interactive, sizePx, silhouette]);
 
   useEffect(() => {
     const targetFace = (now: number): { face: Face; moving: boolean } => {
@@ -128,7 +138,7 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       const working = p.activity !== "idle";
       if (working && (p.paused || p.reduced)) return { face: STILL_WORKING_FACE, moving: false };
       if (!p.reduced) {
-        const performed = e.director.frame(now);
+        const performed = e.director?.frame(now);
         if (performed) return { face: performed, moving: true };
       }
       if (e.hover && p.interactive) return { face: lookToward(FRONT_FACE, e.pointer[0], e.pointer[1]), moving: false };

@@ -50,6 +50,8 @@ export type MausAvatarProps = {
   animated?: boolean;
   bodyId?: BotBodyId;
   gradient?: [string, string, string];
+  /** Every mascot of the same agent shares its animation; pass the agent's id. */
+  syncKey?: string;
 };
 
 function MausAvatarComponent(props: MausAvatarProps, ref: React.Ref<MausAvatarHandle>) {
@@ -86,6 +88,7 @@ function FlatAvatarComponent(
     animated = true,
     bodyId,
     gradient,
+    syncKey,
   }: MausAvatarProps,
   ref: React.Ref<MausAvatarHandle>,
 ) {
@@ -115,6 +118,7 @@ function FlatAvatarComponent(
       <SphereMascot
         ref={inner}
         activity={activityForState(state === "idle" && motionState ? motionState : state)}
+        syncKey={syncKey}
         size={size}
         silhouette={silhouette}
         fill={gradient?.[1] ?? MAUS_COLORS[color] ?? MAUS_COLORS.green}
@@ -132,6 +136,7 @@ export const MausAvatar = memo(forwardRef(MausAvatarComponent));
 
 export type BotAvatarProps = Omit<MausAvatarProps, "color" | "gradient"> & {
   bot: {
+    id?: string;
     name?: string;
     color: MausColor;
     avatarUrl?: string | null;
@@ -177,6 +182,7 @@ export function BotAvatar({ bot, size = 44, label, ...mascotProps }: BotAvatarPr
         bodyId={wornBody(bot.mascotBody, bot.color, dressed)}
         {...mascotProps}
         color={bot.color}
+        syncKey={mascotProps.syncKey ?? bot.id}
         size={size}
         label={label ?? bot.name}
       />

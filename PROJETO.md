@@ -159,6 +159,19 @@ Mais recente primeiro. Modelo de entrada:
 - **Como verificar:** comando ou passo usado.
 ```
 
+### 2026-10-26 — Ajustes do mascote: olhos da varredura, prévia e animação igual em todo lugar
+- **O quê:**
+  - Os olhos da varredura para baixo (pensando/lendo) ficaram 15% menores que o medido, a pedido.
+  - A linha do agente na barra lateral não troca mais a última mensagem pelos pontinhos de "trabalhando":
+    mostra a última mensagem do agente (a sua só aparece depois que ele responde), como no Grok.
+  - Todos os mascotes do mesmo agente (barra lateral, cabeçalho do chat, mascote no chat) compartilham uma
+    só animação e fazem o mesmo gesto ao mesmo tempo. O mascote do chat agora é sempre o mascote, com a mesma
+    fase da barra lateral (os três pontinhos do pensamento são do próprio mascote).
+- **Onde:** `src/components/mascot-director.ts` (`leaseDirector`, tamanho dos olhos por gesto),
+  `SphereMascot.tsx`/`Avatar.tsx` (`syncKey` = id do agente), `ThinkingDots.tsx` (`PresenceMascot`),
+  `ChatView.tsx`, `GroupView.tsx`, `Sidebar.tsx`, `sidebar-preview.ts`.
+- **Como verificar:** `npx vitest run src/components/mascot-director.test.ts src/components/SidebarBotListItem.test.ts`.
+
 ### 2026-10-26 — Mascote age conforme o que o agente está fazendo, igual ao Grok Bot
 - **O quê:** novas medições quadro a quadro dos vídeos em `videos/` (três do Grok, um do nosso), com o corpo,
   a posição e o tamanho de cada olho e o deslocamento do corpo a cada 100 ms. Com elas:

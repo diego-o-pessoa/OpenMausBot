@@ -1547,7 +1547,7 @@ export function GroupView({ group }: { group: Group }) {
           )}
           {(speaker || presenceVisible) && (
             <TurnPresence
-              avatar={<PresenceMascot bot={presenceSpeaker ?? { color: "green" }} working={Boolean(toolInFlight && !awaited)} />}
+              avatar={<PresenceMascot bot={presenceSpeaker ?? { color: "green" }} state={toolInFlight && !awaited ? "working" : "thinking"} syncKey={`${group.id}:${presenceSpeaker?.id ?? ""}`} />}
               visible={presenceVisible}
               phrases={activity.phrases}
               phase={activity.phase}

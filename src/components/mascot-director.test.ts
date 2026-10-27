@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { MASCOT_CLIPS } from "./mascot-clips";
-import { FINALE_MS, MascotDirector, REPERTOIRE } from "./mascot-director";
-import { IDLE_FACE, trackDurationMs } from "./sphere-mascot";
+import { FINALE_MS, MascotDirector, REPERTOIRE, leaseDirector } from "./mascot-director";
+import { IDLE_FACE, trackDurationMs, trackFaceAt } from "./sphere-mascot";
 
 const sequence = (values: number[]) => {
   let i = 0;
@@ -83,5 +83,29 @@ describe("MascotDirector", () => {
     director.celebrate(100 + typingMs + 500, IDLE_FACE);
     expect(director.current).toBe("celebrate");
     expect(director.frame(100 + FINALE_MS + 100)).toBeNull();
+  });
+});
+
+describe("leaseDirector", () => {
+  it("gives every mascot of one agent the same director until the last lets go", () => {
+    const a = leaseDirector("bot-1");
+    const b = leaseDirector("bot-1");
+    expect(b.director).toBe(a.director);
+    expect(leaseDirector("bot-2").director).not.toBe(a.director);
+    a.release();
+    expect(leaseDirector("bot-1").director).toBe(b.director);
+    b.release();
+    expect(leaseDirector(undefined).director).not.toBe(leaseDirector(undefined).director);
+  });
+});
+
+describe("the low scans", () => {
+  it("draw their eyes a little smaller than measured", () => {
+    const director = new MascotDirector(() => 0);
+    director.setActivity("reading", 0, IDLE_FACE);
+    expect(director.current).toBe("downScanA");
+    const drawn = director.frame(1000)!;
+    const measured = trackFaceAt(MASCOT_CLIPS.downScanA, 1000);
+    expect(drawn.eyes[0].length).toBeCloseTo(measured.eyes[0].length * 0.85, 3);
   });
 });

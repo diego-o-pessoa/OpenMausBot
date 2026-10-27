@@ -4,8 +4,8 @@ import {
   DOT_CYCLE_MS,
   FRONT_FACE,
   dotBeat,
-  faceFromSample,
   mixFace,
+  scaleEyes,
   trackDurationMs,
   trackFaceAt,
   type Face,
@@ -44,6 +44,15 @@ const ease = (t: number) => {
   const k = Math.max(0, Math.min(1, t));
   return k * k * (3 - 2 * k);
 };
+
+/** Eyes drawn smaller than measured, by the owner's choice: the low left-to-right scans. */
+const EYE_SIZE: Partial<Record<MascotClipName, number>> = { downScanA: 0.85, downScanB: 0.85, downScanC: 0.85 };
+
+function clipFaceAt(name: MascotClipName, elapsed: number): Face {
+  const face = trackFaceAt(MASCOT_CLIPS[name], elapsed);
+  const size = EYE_SIZE[name];
+  return size ? scaleEyes(face, size) : face;
+}
 
 function actMs(act: Act): number {
   switch (act.kind) {
@@ -177,7 +186,7 @@ export class MascotDirector {
   }
 
   private firstFaceOf(act: Act | undefined): Face {
-    if (act?.kind === "clip") return faceFromSample(MASCOT_CLIPS[act.name][0]);
+    if (act?.kind === "clip") return clipFaceAt(act.name, 0);
     if (act?.kind === "hold") return act.face;
     return FRONT_FACE;
   }
@@ -186,7 +195,7 @@ export class MascotDirector {
     const fade = ease(elapsed / FADE_MS);
     switch (act.kind) {
       case "clip":
-        return mixFace(this.from, trackFaceAt(MASCOT_CLIPS[act.name], elapsed), fade);
+        return mixFace(this.from, clipFaceAt(act.name, elapsed), fade);
       case "hold":
         return mixFace(this.from, act.face, fade);
       case "fold":
@@ -202,4 +211,27 @@ export class MascotDirector {
         };
     }
   }
+}
+
+const shared = new Map<string, { director: MascotDirector; users: number }>();
+
+/**
+ * The director for one agent, shared by every mascot that shows it (sidebar row, chat header, chat), so all
+ * of them play the same gesture at the same moment. Without a key the mascot gets its own.
+ */
+export function leaseDirector(key: string | undefined): { director: MascotDirector; release: () => void } {
+  if (!key) return { director: new MascotDirector(), release: () => {} };
+  const entry = shared.get(key) ?? { director: new MascotDirector(), users: 0 };
+  entry.users += 1;
+  shared.set(key, entry);
+  let released = false;
+  return {
+    director: entry.director,
+    release: () => {
+      if (released) return;
+      released = true;
+      entry.users -= 1;
+      if (entry.users === 0 && shared.get(key) === entry) shared.delete(key);
+    },
+  };
 }

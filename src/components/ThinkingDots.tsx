@@ -1,4 +1,4 @@
-import { MAUS_COLORS, type MausColor } from "@/lib/mascot";
+import type { MausState } from "@/lib/mascot";
 import { BotAvatar, type BotAvatarProps } from "./Avatar";
 
 const DOT_DELAYS_MS = [0, 300, 600];
@@ -19,12 +19,11 @@ export function ThinkingDots({ color, size = 36 }: { color: string; size?: numbe
   );
 }
 
-/** Thinking shows the dots; once the bot is working they merge into its mascot. */
-export function PresenceMascot({ bot, working, size = 36 }: { bot: BotAvatarProps["bot"]; working: boolean; size?: number }) {
-  if (!working) return <ThinkingDots color={MAUS_COLORS[bot.color as MausColor] ?? MAUS_COLORS.green} size={size} />;
+/** The agent's own mascot, acting out the same phase in step with its other mascots on screen. */
+export function PresenceMascot({ bot, state, syncKey, size = 36 }: { bot: BotAvatarProps["bot"]; state: MausState; syncKey?: string; size?: number }) {
   return (
     <span className="presence-mascot-in inline-flex shrink-0">
-      <BotAvatar bot={bot} state="working" size={size} trackPointer={false} />
+      <BotAvatar bot={bot} state={state} syncKey={syncKey} size={size} trackPointer={false} />
     </span>
   );
 }

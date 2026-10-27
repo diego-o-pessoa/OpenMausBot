@@ -1076,7 +1076,6 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
   }, [lastTypedMessage]);
 
   const lastMessage = lastNonReceipt(messages);
-  const toolInFlight = lastMessage?.kind === "activity" && lastMessage.tool?.ok === undefined;
   const activity = liveActivityPhrases(lastMessage);
   const waiting = Boolean(
     bot.busy &&
@@ -1352,7 +1351,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
             </div>
           )}
           <TurnPresence
-            avatar={<PresenceMascot bot={bot} working={toolInFlight} />}
+            avatar={<PresenceMascot bot={bot} state={stateForBot({ ...bot, busy: true, messages })} />}
             visible={presenceVisible}
             phrases={activity.phrases}
             phase={activity.phase}

@@ -19,8 +19,7 @@ export function lastPreviewable<T extends { kind: string }>(messages: readonly T
 export function botPreview(bot: Bot, visible: Message[], instances: InstanceInfo[], advanced: boolean): string {
   if (bot.activity === "waiting-on-you") return t("sidebar.preview.waiting");
   if (bot.waitingForTeammates) return t("sidebar.preview.waitingOnTeammate");
-  if (bot.busy) return t("sidebar.preview.working");
-  const last = lastPreviewable(visible);
+  const last = lastPreviewable(bot.busy ? visible.filter((message) => message.role !== "user") : visible);
   if (!last) return "";
   if (last.kind === "options" && last.card) {
     return (last.card.requestId && last.card.tool && !last.card.questionRequest && approvalCardOutcome(last.card)) || last.card.title;

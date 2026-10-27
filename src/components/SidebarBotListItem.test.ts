@@ -294,10 +294,11 @@ describe("BotListItem", () => {
     expect(markup).not.toContain("](https://");
   });
 
-  it("shows typing dots instead of preview text while the bot works", () => {
-    const markup = renderRow(bot({ busy: true }));
+  it("keeps the last message as the preview while the bot works, as Grok Bot does", () => {
+    const markup = renderRow(bot({ busy: true, messages: [{ id: "b1", role: "bot", kind: "text", text: "Posted the offer.", at: 1 }] as Bot["messages"] }));
 
-    expect(markup).toContain("animate-status-pulse");
+    expect(markup).not.toContain("animate-status-pulse");
+    expect(markup).toContain(">Posted the offer.<");
     expect(markup).toContain('class="sr-only">Working…');
   });
 
@@ -337,7 +338,7 @@ describe("BotListItem", () => {
 
   it("keeps real sibling work visible while another thread waits for a teammate", () => {
     const markup = renderRow(bot({ waitingForTeammates: true, busy: true, activity: "working" }));
-    expect(markup).toContain('<span class="flex h-[1.5em] items-center" role="status">');
+    expect(markup).toContain('role="status" class="sr-only">Working…');
     expect(markup).not.toContain('data-testid="teammate-wait-dot"');
   });
 
