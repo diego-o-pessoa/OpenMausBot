@@ -34,11 +34,13 @@ if ($running.Count) {
     $running | Wait-Process -Timeout 15 -ErrorAction SilentlyContinue
     # The window, renderer, GPU and server are all OpenMausBot.exe: end the whole tree, or the main process
     # survives without its renderer and shows a blank window.
-    & taskkill.exe /F /T /IM OpenMausBot.exe | Out-Null
+    # Windows PowerShell 5.1 turns a native command's stderr into a terminating error here; taskkill writes
+    # "not found" there once the tree has already exited, so cmd swallows it.
+    & cmd.exe /d /c "taskkill /F /T /IM OpenMausBot.exe >nul 2>&1"
     # On a busy machine the process tree can take well over 15 s to exit after taskkill.
     $deadline = (Get-Date).AddSeconds(60)
     while ((Get-Process -Name OpenMausBot -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) {
-        & taskkill.exe /F /T /IM OpenMausBot.exe 2>$null | Out-Null
+        & cmd.exe /d /c "taskkill /F /T /IM OpenMausBot.exe >nul 2>&1"
         Start-Sleep -Seconds 1
     }
     if (Get-Process -Name OpenMausBot -ErrorAction SilentlyContinue) { throw "Nao foi possivel fechar o OpenMausBot." }
