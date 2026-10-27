@@ -172,6 +172,8 @@ const __APP_VERSION__: string;
         /** Local targets answer {ok, error?} (error strings are an open set); remote ones answer nothing. */
         switch: (id: string) => Promise<{ ok: boolean; error?: string } | void>;
         addFromLink: (link: string, name?: string) => Promise<boolean | void>;
+        /** Save the server installed on an SSH alias, open its SSH tunnel, and pair with the one-time code. */
+        addVpsServer?: (input: { alias: string; remotePort: number; code?: string; name?: string }) => Promise<{ ok: boolean; error?: string; id?: string; origin?: string }>;
         /** Register a named local environment; an omitted dataDir lands beside the app's own. */
         create: (name: string, dataDir?: string) => Promise<{ ok: boolean; error?: string; state: unknown }>;
         /** Native folder chooser for the create form; { ok: false } on cancel. */

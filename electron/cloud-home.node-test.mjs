@@ -461,7 +461,7 @@ test("the Server menu opens My Cloud through the Cloud's own connection, never a
     connectCloudHome: (...args) => connect(...args), cloudHomeSignedIn: async () => signedIn,
     openLendingSettings: async () => { calls.push("settings"); },
     persistEnvironments: next => { calls.push(`active:${next.activeId}`); context.environmentsState = next; }, withActive: environments.withActive,
-    navigateMainWindow: url => calls.push(`navigate:${url}`), activeOrigin: () => context.environmentsState.environments.find(e => e.id === context.environmentsState.activeId)?.origin,
+    navigateMainWindow: url => calls.push(`navigate:${url}`), remoteUrlFor: async (_entry, url) => url, activeOrigin: () => context.environmentsState.environments.find(e => e.id === context.environmentsState.activeId)?.origin,
     homeWindow: { cloudOrigin: () => null }, showHome: async (options) => { calls.push(options ? `home:${JSON.stringify(options)}` : "home"); },
     homePlaces: { remember: (place) => calls.push(`remember:${JSON.stringify(place)}`) },
   });

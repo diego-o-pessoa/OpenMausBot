@@ -580,7 +580,7 @@ import {
 } from "./phone-secret.ts";
 // Keep these two last, so loading the route table leaves module start-up order as is.
 import { gzipTunnelReplies, json, onJsonBody, parsedBodyOf, readBody } from "./harness/http.ts";
-import { PASS, ROUTES, dispatchRoutes } from "./routes/table.ts"; import { applyIncludedPagesMessage } from "./pages/access.ts"; import { createPublishedPages } from "./pages/service.ts"; import { createXResearchInternalRoutes } from "./routes/x-research.ts"; import { createMoveFreeze, switchAutomationsOff } from "./move-freeze.ts"; import { createMoveFreezeRoutes } from "./routes/move-freeze.ts"; import { assertBotHere, createBotMoves } from "./bot-moves.ts"; import { createBotMoveRoutes } from "./routes/bot-moves.ts"; import { createTeamMoveIn, moveInRefusal } from "./team-move-in.ts";
+import { createRemoteServerRoutes } from "./routes/remote-server.ts"; import { createRemoteServerJobs, movePayload, openReverseTunnel } from "./remote-server.ts"; import { PASS, ROUTES, dispatchRoutes } from "./routes/table.ts"; import { applyIncludedPagesMessage } from "./pages/access.ts"; import { createPublishedPages } from "./pages/service.ts"; import { createXResearchInternalRoutes } from "./routes/x-research.ts"; import { createMoveFreeze, switchAutomationsOff } from "./move-freeze.ts"; import { createMoveFreezeRoutes } from "./routes/move-freeze.ts"; import { assertBotHere, createBotMoves } from "./bot-moves.ts"; import { createBotMoveRoutes } from "./routes/bot-moves.ts"; import { createTeamMoveIn, moveInRefusal } from "./team-move-in.ts";
 import { createHostedSlackRoutes } from "./routes/hosted-slack.ts";
 import { createBotPresetRoutes } from "./routes/bot-presets.ts";
 import { createBotMemoryRoutes } from "./routes/bot-memory.ts";
@@ -10101,6 +10101,17 @@ const webhookIngressStatus = () => ({
   ...(webhookIngressError ? { error: webhookIngressError } : {}),
 });
 ROUTES.push(createWebhookRoutes({ webhooks, ingress: webhookIngressStatus, visible: (auth) => visibleTo(viewerFor(auth)) }));
+ROUTES.push(createRemoteServerRoutes({
+  jobs: createRemoteServerJobs({ dataDir: DATA_DIR }), savedAlias: () => vpsSshAlias(cfg), available: () => !CLOUD_HOME && !HOSTED_WORKSPACE,
+  move: () => ({
+    payload: () => {
+      const pairing = sessions.openPairing({ label: "Move to VPS", scopes: ["admin", "client"] });
+      const { payload } = movePayload({ code: formatPairingCode(pairing.code), config: cfg as unknown as Record<string, unknown>, home: homedir(), dataDir: DATA_DIR });
+      return Buffer.from(JSON.stringify(payload)).toString("base64");
+    },
+    reverseTunnel: (alias) => openReverseTunnel(DATA_DIR, alias, PORT),
+  }),
+}));
 
 const RUNTIME_KEEP_MS = 30 * 24 * 60 * 60_000;
 let runtimePrunedAt = 0;
