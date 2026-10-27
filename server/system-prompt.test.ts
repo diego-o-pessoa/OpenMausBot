@@ -408,6 +408,10 @@ describe("working on its own", () => {
     expect(AUTONOMY_PROMPT).toMatch(/alternatives/);
     expect(AUTONOMY_PROMPT).toMatch(/do not only acknowledge it or save it to memory/);
     expect(AUTONOMY_PROMPT).toMatch(/standing instructions or the person tell you to/);
+    expect(AUTONOMY_PROMPT).toMatch(/read it back and check it/);
+    expect(AUTONOMY_PROMPT).toMatch(/who it is assigned to, who it was sent as/);
+    expect(AUTONOMY_PROMPT).toMatch(/fix it at once and check again, without waiting to be told/);
+    expect(AUTONOMY_PROMPT).toMatch(/Never say something is done until you have seen that it is/);
     for (const persona of ["You are Kiwi.", "persona"]) {
       expect(buildSystemPrompt(persona, "", []).text).toContain(AUTONOMY_PROMPT);
     }
