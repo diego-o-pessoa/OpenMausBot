@@ -88,7 +88,7 @@ describe("a call's record at the end of a chat that is still working", () => {
       record,
     ]);
     expect(markup).toContain('data-testid="call-record"');
-    expect(markup).toContain("Running the tests");
+    expect(markup).toContain("Running a command");
   });
 
   it("shows no working line for a reply that settled just before the call ended", () => {
