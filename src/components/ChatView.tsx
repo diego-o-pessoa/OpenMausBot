@@ -1351,7 +1351,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
             </div>
           )}
           <TurnPresence
-            avatar={<PresenceMascot bot={bot} state={stateForBot({ ...bot, busy: true, messages })} />}
+            avatar={<PresenceMascot bot={bot} state={stateForBot({ ...bot, messages })} />}
             visible={presenceVisible}
             phrases={activity.phrases}
             phase={activity.phase}

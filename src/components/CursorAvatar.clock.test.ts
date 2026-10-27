@@ -107,6 +107,24 @@ describe("the mascot on the shared clock", () => {
     expect(mascotClock().pending()).toBe(0);
   });
 
+  it("keeps an agent still when only a still mascot of it shows a busy expression", () => {
+    render([
+      { state: "idle", size: 36, syncKey: "maya" },
+      { state: "working", size: 24, animated: false, syncKey: "maya" },
+    ]);
+    run(3000);
+    expect(mascotClock().pending()).toBe(0);
+  });
+
+  it("moves every mascot of an agent once a live one starts working", () => {
+    render([
+      { state: "working", size: 36, syncKey: "maya" },
+      { state: "idle", size: 24, syncKey: "maya" },
+    ]);
+    run(500);
+    expect(mascotClock().pending()).toBe(2);
+  });
+
   it("lets a small idle mascot settle to no frames, and wakes it for a blink", () => {
     const ref = createRef<MausAvatarHandle>();
     render([{ state: "idle", size: 24, ref }]);

@@ -76,6 +76,7 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
     props: { activity, pinned: face, paused, reduced, interactive, sizePx, centre },
     face: face ?? (activity === "idle" ? IDLE_FACE : STILL_WORKING_FACE),
     director: null as MascotDirector | null,
+    lastActivity: activity,
     pressStart: null as number | null,
     blinkStart: null as number | null,
     hover: false,
@@ -121,7 +122,13 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
 
   useEffect(() => {
     const e = engine.current;
-    if (!reduced) e.director?.setActivity(activity, performance.now(), e.face);
+    const was = e.lastActivity;
+    e.lastActivity = activity;
+    const showsLiveState = !paused;
+    if (!reduced && e.director) {
+      if (showsLiveState) e.director.setActivity(activity, performance.now(), e.face);
+      else if (was !== "idle" && activity === "idle") e.director.celebrate(performance.now(), e.face);
+    }
     e.drawn = "";
     wake();
   }, [activity, syncKey, face, paused, reduced, interactive, sizePx, silhouette]);

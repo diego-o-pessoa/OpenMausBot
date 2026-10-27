@@ -1444,7 +1444,7 @@ export function reducer(state: AppState, action: Action): AppState {
           ? action.message.tool?.ok === false
             ? "failure"
             : action.message.tool?.ok === true
-              ? "success"
+              ? null
               : "working"
           : null;
       const next = motion ? withMascotMotion(stamped, bot.id, motion) : stamped;

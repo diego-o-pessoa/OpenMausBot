@@ -159,6 +159,17 @@ Mais recente primeiro. Modelo de entrada:
 - **Como verificar:** comando ou passo usado.
 ```
 
+### 2026-10-26 — Mascote de agente parado não anima por causa de um grupo
+- **O quê:** bots de um time (ex.: Maya, Lens) animavam sem parar na barra lateral sem terem recebido nada.
+  A barra de membros do grupo desenha cada mascote com a expressão salva no perfil (`mascotExpression`:
+  "focused", "thinking"…), que vira "trabalhando"; como os mascotes do mesmo agente compartilham a animação,
+  esse mascote parado decidia por todos. Agora só um mascote animado define o que o agente encena; um parado
+  só repassa o fim de um trabalho que viu. O mascote do chat deixou de forçar "ocupado", e uma ferramenta
+  que dá certo também não sorri mais quando a mensagem é atualizada.
+- **Onde:** `src/components/SphereMascot.tsx`, `ChatView.tsx`, `src/state/store.tsx`.
+- **Como verificar:** `npx vitest run src/components/CursorAvatar.clock.test.ts` (o teste novo falha sem a
+  correção).
+
 ### 2026-10-26 — Instalador do app de desktop para Linux
 - **O quê:** `instalar-linux.sh --desktop` compila o app de desktop deste fork (`pnpm package:linux`) e
   instala o `.deb` com `apt` (menu de aplicativos, sandbox do navegador configurado). Sem `--desktop`, o
