@@ -846,10 +846,25 @@ export function podmanSecurityIsHardened(
   }, { podmanBrowserSandbox: true });
 }
 
+const VM_CPUS = 2;
+
+/** Docker and Podman refuse --cpus above the CPUs their engine sees, so a 1-CPU VPS gets 1. */
+export async function engineCpuLimit(runtime: Runtime, runner: CommandRunner): Promise<number> {
+  if (runtime === "container") return VM_CPUS;
+  try {
+    const { stdout } = await runner(runtime, ["info", "--format", runtime === "podman" ? "{{.Host.CPUs}}" : "{{.NCPU}}"], 15_000);
+    const available = Number.parseInt(stdout.trim(), 10);
+    return Number.isInteger(available) && available > 0 ? Math.min(VM_CPUS, available) : VM_CPUS;
+  } catch {
+    return VM_CPUS;
+  }
+}
+
 export function containerRunArgs(
   runtime: Runtime,
   password = "CHANGE_ME",
   target: LocalVmTarget = SHARED_LOCAL_VM_TARGET,
+  cpus = VM_CPUS,
 ): string[] {
   if (runtime === "container" && target.key !== SHARED_LOCAL_VM_TARGET.key) {
     throw new Error("Per-bot Local VMs require Docker or Podman because Apple container requires a fixed host port");
@@ -898,7 +913,7 @@ export function containerRunArgs(
       "--memory-swap",
       "4g",
       "--cpus",
-      "2",
+      String(cpus),
       "--pids-limit", String(PIDS_LIMIT),
       // Pinned: a daemon with host-mode IPC/cgroup defaults would create a container the hardening check then rejects.
       "--ipc",
@@ -996,7 +1011,7 @@ export async function containerComputerAction(
     if (action === "run") await ensureVmWorkspace(platform, target);
     const args =
       action === "run"
-        ? containerRunArgs(runtime, randomBytes(6).toString("base64url"), target)
+        ? containerRunArgs(runtime, randomBytes(6).toString("base64url"), target, await engineCpuLimit(runtime, runner))
         : action === "remove"
           ? ["rm", runtime === "container" ? "--force" : "-f", target.containerName]
           : [action, target.containerName];

@@ -27,6 +27,7 @@ import {
   containerComputerStatus,
   containerRuntimeStatus,
   containerRunArgs,
+  engineCpuLimit,
   dockerSecurityIsHardened,
   localVmRecreatableOnDemand,
   localVmResumable,
@@ -1025,6 +1026,16 @@ describe("setupCommands", () => {
     expect(a.workspaceDir).not.toBe(b.workspaceDir);
     expect(a.containerName).not.toContain("bot-a");
     expect(a.workspaceDir).not.toContain("bot-a");
+  });
+
+  it("gives a desktop no more CPUs than the engine has, which a 1-CPU VPS needs", async () => {
+    const one = runner({ "docker info --format {{.NCPU}}": "1\n" });
+    expect(await engineCpuLimit("docker", one.run)).toBe(1);
+    expect(await engineCpuLimit("docker", runner({ "docker info --format {{.NCPU}}": "8" }).run)).toBe(2);
+    expect(await engineCpuLimit("podman", runner({ "podman info --format {{.Host.CPUs}}": "1" }).run)).toBe(1);
+    expect(await engineCpuLimit("docker", runner({}).run)).toBe(2);
+    const args = containerRunArgs("docker", "secret", perBotLocalVmTarget("bot-a"), 1);
+    expect(args[args.indexOf("--cpus") + 1]).toBe("1");
   });
 
   it("asks Docker for an ephemeral loopback viewer port for each per-bot VM", () => {
