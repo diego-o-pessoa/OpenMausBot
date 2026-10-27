@@ -2342,6 +2342,7 @@ function claimTurnResource(owner: TurnOwner, resource: string): boolean {
 function releaseTurnResources(owner: TurnOwner | undefined): void {
   if (!owner) return;
   if (autoVmClaims.get(owner.threadId)?.owner.generation === owner.generation) autoVmClaims.delete(owner.threadId);
+  if (vpsExecTargets.get(owner.threadId)?.owner.generation === owner.generation) vpsExecTargets.delete(owner.threadId);
   if (settlingResourceOwners.get(owner.threadId) === owner.generation) settlingResourceOwners.delete(owner.threadId);
   cloudComputerPower.released(owner);
   turnResources.release(owner);
@@ -6130,6 +6131,7 @@ function waitForLocalVmUpdate(target: LocalVmTarget, threadId: string, isCurrent
     announce: (text) => { store.appendMessage(threadId, { role: "bot", kind: "activity", ...(from ? { from } : {}), tool: { name: text } }); } });
 }
 const activeVpsThreads = new Map<string, Set<string>>();
+const vpsExecTargets = new Map<string, { owner: TurnOwner; cfg: AppConfig; container: string }>();
 function vpsThreadStarted(botId: string, threadId: string): void {
   const threads = activeVpsThreads.get(botId) ?? new Set<string>();
   threads.add(threadId);
@@ -6352,6 +6354,7 @@ async function mountBotVps(
   if (!remote?.ready || !remote.sshAlias) return { problem: remote?.problem ?? null, reachable: remote?.daemonUp === true, outdated: vpsDesktopOutdated(remote) };
   const targetCfg = { ...cfg, vps: { sshAlias: remote.sshAlias } };
   const vpsMcp = vps.vpsComputerMcp(targetCfg, bot.id, remote.container_id ?? undefined);
+  vpsExecTargets.set(owner.threadId, { owner, cfg: targetCfg, container: remote.container_id ?? vps.vpsContainerName(bot.id) });
   const vpsControl = controlIntegration(bot.id, owner.threadId, owner.generation);
   // Live frames only once this turn holds the desktop, or it would publish another turn's screen as its own.
   const vpsCapture = () => vps.vpsComputerScreenshot(targetCfg, bot.id);
@@ -14394,7 +14397,15 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
         const body = await readInternalBody();
         try {
           const vm = await attachmentVmForTurn(internalCapability);
-          if (!vm) return json(res, 409, { error: "You have no Local VM desktop in this turn, so there is nowhere to run a command." });
+          const vpsTarget = vm ? undefined : vpsExecTargets.get(threadId);
+          if (vpsTarget && vpsTarget.owner.generation === internalCapability.generation) {
+            const gate = await computerCallGate(internalCapability);
+            if (gate.held) return json(res, 409, { error: controlRefusal(gate) });
+            return json(res, 200, await vps.vpsContainerExec(vpsTarget.cfg, vpsTarget.container, typeof body.command === "string" ? body.command : "", {
+              timeoutSeconds: typeof body.timeout_seconds === "number" ? body.timeout_seconds : undefined,
+            }));
+          }
+          if (!vm) return json(res, 409, { error: "You have no Local VM or VPS desktop in this turn, so there is nowhere to run a command." });
           const runtime = (await containerRuntimeStatus()).runtime;
           requireActiveInternalCapability();
           if (!runtime || !internalCapabilityIsActive({ ...internalCapability, localVmTarget: vm }) ||

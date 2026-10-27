@@ -129,6 +129,9 @@ case "$*" in
       exit 1
     fi
     cat "$FAKE_DOCKER_DIR/image.json" ;;
+  *" exec "*"__openmausbot_exit__"*)
+    if [ -f "$FAKE_DOCKER_DIR/exec-fails" ]; then echo "E: Unable to locate package fixture" >&2; echo "__openmausbot_exit__=100" >&2; exit 0; fi
+    echo "fixture shell output"; echo "__openmausbot_exit__=0" >&2 ;;
   *" exec "*"--version"*) echo "cua-driver ${CUA_DRIVER_VERSION}" ;;
   *" exec "*"--screenshot-out-file"*)
     : > "$FAKE_DOCKER_DIR/capture-started"
@@ -631,6 +634,44 @@ createServer(socket => socket.end()).listen(port, '127.0.0.1');
     },
     60_000,
   );
+
+  it("runs a bot's shell commands in its own VPS container, as the desktop user, while its turn holds the VPS", async () => {
+    await api("PUT", "/api/config", { vps: { sshAlias: "production-vps" } });
+    const bot = (await api("POST", "/api/bots")).body.bot;
+    writeFileSync(join(dirname(dockerLog), "container.name"), vpsContainerName(bot.id));
+    rmSync(gateFile, { force: true }); rmSync(`${acpDump}.mcp.json`, { force: true });
+    await api("PATCH", `/api/bots/${bot.id}`, { browser: false, cloudBackend: "vps", computer: "cloud",
+      modelSelection: { instanceId: "vps", model: "fake-model" } });
+    try {
+      expect((await api("POST", `/api/bots/${bot.id}/messages`, { text: "Install AnyDesk on the VPS" })).status).toBe(202);
+      await until(async () => existsSync(`${acpDump}.mcp.json`), "the VPS turn");
+      const servers = JSON.parse(readFileSync(`${acpDump}.mcp.json`, "utf8")) as Array<{ name: string; env?: Array<{ name: string; value: string }> }>;
+      expect(servers.find((server) => server.name === "computer")).toBeTruthy();
+      const token = servers.find((server) => server.name === "agents")?.env?.find((entry) => entry.name === "OMB_COMMS_TOKEN")?.value ?? "";
+      const exec = (command: string) => fetch(`${BASE}/api/internal/vm-exec`, {
+        method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ command, timeout_seconds: 30 }),
+      });
+      const before = readFileSync(dockerLog, "utf8").length;
+      const ran = await exec("printf fixture-install");
+      expect(ran.status, await ran.clone().text()).toBe(200);
+      expect(await ran.json()).toEqual({ exitCode: 0, stdout: "fixture shell output\n", stderr: "", timedOut: false });
+      const line = readFileSync(dockerLog, "utf8").slice(before).split("\n").find((entry) => entry.includes("__openmausbot_exit__"))!;
+      expect(line.startsWith("-H ssh://production-vps exec -u cua ")).toBe(true);
+      expect(line).toContain(CONTAINER_ID);
+      expect(line.endsWith("30 printf fixture-install")).toBe(true);
+
+      writeFileSync(join(dirname(dockerLog), "exec-fails"), "fail");
+      expect(await (await exec("sudo apt-get install -y fixture")).json())
+        .toEqual({ exitCode: 100, stdout: "", stderr: "E: Unable to locate package fixture\n", timedOut: false });
+    } finally {
+      rmSync(join(dirname(dockerLog), "exec-fails"), { force: true });
+      writeFileSync(gateFile, "open");
+      await until(async () => !(await botById(bot.id))?.busy, "the VPS turn to end");
+    }
+    const after = await fetch(`${BASE}/api/internal/vm-exec`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ command: "true" }) });
+    expect(after.status).not.toBe(200);
+  }, 45_000);
 
   it(
     "runs two turns of one bot on the VPS at once; the desktop is claimed by the first computer call and waited for by name",
