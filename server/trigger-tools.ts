@@ -51,6 +51,7 @@ function agentSchedule(schedule: Routine["schedule"]) {
       ...(schedule.weekdays === undefined ? {} : { weekdays: schedule.weekdays.map((day) => WEEKDAY_NAMES[day]) }),
       ...(schedule.window === undefined ? {} : { window: { ...schedule.window } }),
       ...(schedule.endsAt === undefined ? {} : { endsAt: new Date(schedule.endsAt).toISOString() }),
+      ...(schedule.random ? { random: true } : {}),
     };
   }
   return { type: "weekly" as const, time: schedule.time, weekdays: schedule.weekdays.map((day) => WEEKDAY_NAMES[day]) };

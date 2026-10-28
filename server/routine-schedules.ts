@@ -2,7 +2,7 @@
 import { AFTER_RESET_MS, type LimitResetSchedule, type LimitResetScheduleInput } from "../shared/limit-reset.ts";
 import { normalizeCronSchedule, nextCronRuns, type RoutineCronSchedule } from "../shared/routine-schedule.ts";
 import type { RoutineIntervalWindow } from "../shared/routines.ts";
-import { clockMinutes, INTERVAL_RESTRICTION_SEARCH_MS, intervalAllowsOccurrence, intervalHasRestrictions, MAX_DATE_MS, nextAlignedInterval } from "./routine-intervals.ts";
+import { clockMinutes, INTERVAL_RESTRICTION_SEARCH_MS, intervalAllowsOccurrence, intervalHasRestrictions, MAX_DATE_MS, nextAlignedInterval, nextRandomIntervalRun } from "./routine-intervals.ts";
 
 export interface RoutineIntervalSchedule {
   type: "interval";
@@ -12,9 +12,12 @@ export interface RoutineIntervalSchedule {
   weekdays?: number[];
   window?: RoutineIntervalWindow;
   endsAt?: number;
+  /** Once per interval, at a minute drawn for that interval rather than at its start. */
+  random?: boolean;
 }
 
-export type RoutineIntervalScheduleInput = Omit<RoutineIntervalSchedule, "weekdays" | "window" | "endsAt"> & {
+export type RoutineIntervalScheduleInput = Omit<RoutineIntervalSchedule, "weekdays" | "window" | "endsAt" | "random"> & {
+  random?: boolean;
   weekdays?: number[] | null;
   window?: RoutineIntervalWindow | null;
   endsAt?: number | null;
@@ -51,6 +54,7 @@ export function cloneSchedule(schedule: RoutineSchedule): RoutineSchedule {
       ...(schedule.weekdays ? { weekdays: [...schedule.weekdays] } : {}),
       ...(schedule.window ? { window: { ...schedule.window } } : {}),
       ...(schedule.endsAt === undefined ? {} : { endsAt: schedule.endsAt }),
+      ...(schedule.random ? { random: true } : {}),
     };
   }
   return { type: "daily", time: schedule.time, weekdays: [...schedule.weekdays] };
@@ -145,6 +149,7 @@ function parseSchedule(schedule: RoutineScheduleInput, after: number): RoutineSc
     const weekdays = cleanIntervalWeekdays(schedule.weekdays);
     const window = cleanIntervalWindow(schedule.window, everyMinutes);
     const endsAt = cleanIntervalEndsAt(schedule.endsAt, anchorAt);
+    if (schedule.random !== undefined && typeof schedule.random !== "boolean") throw new Error("Random times must be on or off");
     return {
       type: "interval",
       everyMinutes,
@@ -152,6 +157,7 @@ function parseSchedule(schedule: RoutineScheduleInput, after: number): RoutineSc
       ...(weekdays ? { weekdays } : {}),
       ...(window ? { window } : {}),
       ...(endsAt === undefined ? {} : { endsAt }),
+      ...(schedule.random ? { random: true } : {}),
     };
   }
   throw new Error("Choose a supported schedule");
@@ -175,6 +181,7 @@ export function nextOccurrence(schedule: RoutineSchedule, after: number): number
   if (schedule.type === "limit_reset") return schedule.at !== null && schedule.at > after ? schedule.at : null;
   if (schedule.type === "cron") return nextCronRuns(schedule, after, 1)[0] ?? null;
   if (schedule.type === "interval") {
+    if (schedule.random) return nextRandomIntervalRun(schedule, after);
     const intervalMs = schedule.everyMinutes * 60_000;
     let candidate = nextAlignedInterval(schedule, after);
     if (!intervalHasRestrictions(schedule)) return candidate;
@@ -213,6 +220,7 @@ export function mergeScheduleUpdate(
   if (!Object.hasOwn(incoming, "endsAt") && current.endsAt !== undefined) {
     merged.endsAt = current.endsAt;
   }
+  if (!Object.hasOwn(incoming, "random") && current.random) merged.random = true;
   return merged;
 }
 

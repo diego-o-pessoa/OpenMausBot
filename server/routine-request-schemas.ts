@@ -37,6 +37,7 @@ export const routineToolScheduleSchema = z.discriminatedUnion("type", [
     weekdays: z.array(z.string().max(9)).min(1).max(7).nullable().optional(),
     window: toolIntervalWindowSchema.nullable().optional(),
     endsAt: z.string().max(64).nullable().optional(),
+    random: z.boolean().optional(),
   }).strict(),
 ]);
 
@@ -112,6 +113,7 @@ export const storedScheduleSchema = z.discriminatedUnion("type", [
     weekdays: storedWeekdaysSchema.optional(),
     window: storedIntervalWindowSchema.optional(),
     endsAt: z.number().int().nonnegative().max(MAX_DATE_MS).optional(),
+    random: z.boolean().optional(),
   }).strict(),
 ]).superRefine((schedule, context) => {
   if (schedule.type !== "interval") return;
@@ -146,6 +148,7 @@ export const storedScheduleChangesSchema = z.discriminatedUnion("type", [
     weekdays: storedWeekdaysSchema.nullable().optional(),
     window: storedIntervalWindowSchema.nullable().optional(),
     endsAt: z.number().int().nonnegative().max(MAX_DATE_MS).nullable().optional(),
+    random: z.boolean().optional(),
   }).strict(),
 ]).superRefine((schedule, context) => {
   if (schedule.type !== "interval") return;

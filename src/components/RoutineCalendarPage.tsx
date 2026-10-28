@@ -72,6 +72,7 @@ import { limitResetWhen, type ResetMarker } from "@/lib/limit-resets";
 import { LimitResetFields, type LimitResetChoice } from "./routines/LimitResetFields";
 import { DAY_NAMES, durationLabel, intervalLabel, niceDate, niceTime, scheduleLabel } from "@/lib/schedule-label";
 import { Select } from "./Select";
+import { RandomTimesToggle } from "./RandomTimesToggle";
 import {
   isRoutineProblemRun,
   type Routine,
@@ -203,6 +204,7 @@ function makeRoutineSchedule(
     weekdays: number[] | null;
     window: { start: string; end: string } | null;
     endsAt: number | null;
+    random: boolean;
   },
 ): RoutineScheduleInput {
   if (choice === "interval") return { type: "interval", everyMinutes, ...interval };
@@ -348,16 +350,14 @@ export function EventEditor({
   const [weekdays, setWeekdays] = useState(schedule.type === "daily" ? schedule.weekdays : [new Date(initialAt).getDay()]);
   const [intervalMinutes, setIntervalMinutes] = useState(schedule.type === "interval" ? schedule.everyMinutes : 15);
   const [intervalDays, setIntervalDays] = useState<IntervalDayChoice>(() => intervalDayChoice(schedule));
-  const [intervalWeekdays, setIntervalWeekdays] = useState(() => schedule.type === "interval" && schedule.weekdays?.length
-    ? schedule.weekdays
-    : [...ALL_DAYS]);
+  const [intervalWeekdays, setIntervalWeekdays] = useState(() => schedule.type === "interval" && schedule.weekdays?.length ? schedule.weekdays : [...ALL_DAYS]);
   const [intervalWindow, setIntervalWindow] = useState<IntervalWindowChoice>(schedule.type === "interval" && schedule.window ? "custom" : "all-day");
   const [intervalWindowStart, setIntervalWindowStart] = useState(schedule.type === "interval" ? schedule.window?.start ?? "09:00" : "09:00");
   const [intervalWindowEnd, setIntervalWindowEnd] = useState(schedule.type === "interval" ? schedule.window?.end ?? "17:00" : "17:00");
+  const [intervalRandom, setIntervalRandom] = useState(schedule.type === "interval" && schedule.random === true);
   const [intervalEnd, setIntervalEnd] = useState<IntervalEndChoice>(schedule.type === "interval" && schedule.endsAt != null ? "on-date" : "never");
-  const [intervalEndDate, setIntervalEndDate] = useState(() => schedule.type === "interval" && schedule.endsAt != null
-    ? toLocalDateInput(schedule.endsAt)
-    : toLocalDateInput(addDays(startOfDay(Math.max(Date.now(), initialAt)), 7)));
+  const [intervalEndDate, setIntervalEndDate] = useState(() => toLocalDateInput(schedule.type === "interval" && schedule.endsAt != null
+    ? schedule.endsAt : addDays(startOfDay(Math.max(Date.now(), initialAt)), 7)));
   const [botIds, setBotIds] = useState(lockedBotId ? [lockedBotId] : existingRoutine ? [existingRoutine.botId] : existingCall?.botIds ?? seed.botIds);
   const [resultsThreadId, setResultsThreadId] = useState<string | null | undefined>((existingRoutine ? existingRoutine.resultsThreadId : seed.resultsThreadId) ?? null);
   const selectBots = (ids: string[]) => {
@@ -414,9 +414,7 @@ export function EventEditor({
     : intervalDays === "weekdays"
       ? WEEKDAYS
       : intervalWeekdays;
-  const selectedIntervalWindow = intervalWindow === "custom"
-    ? { start: intervalWindowStart, end: intervalWindowEnd }
-    : undefined;
+  const selectedIntervalWindow = intervalWindow === "custom" ? { start: intervalWindowStart, end: intervalWindowEnd } : undefined;
   const cron = isCronChoice(recurrence)
     ? cronEditorValue(recurrence, cronDraft, editorOpenedAt, !cronChanged && schedule.type === "cron" ? schedule : undefined)
     : null;
@@ -499,6 +497,7 @@ export function EventEditor({
           weekdays: selectedIntervalWeekdays ? [...selectedIntervalWeekdays].sort() : null,
           window: selectedIntervalWindow ?? null,
           endsAt: intervalEndsAt,
+          random: intervalRandom,
         });
         if (!nextSchedule) throw new Error(cron?.error || "Choose a valid schedule.");
         const input: RoutineInput = {
@@ -715,6 +714,7 @@ export function EventEditor({
                       </Select>
                     </span>
                   </div>
+                  <RandomTimesToggle checked={intervalRandom} everyMinutes={intervalMinutes} onChange={setIntervalRandom} />
 
                   {intervalDays === "custom" && (
                     <div>

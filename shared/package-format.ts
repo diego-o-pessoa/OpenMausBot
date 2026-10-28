@@ -120,6 +120,7 @@ export const packageRoutineScheduleSchema = z.discriminatedUnion("type", [
     weekdays: intervalWeekdays.optional(),
     window: intervalWindow.optional(),
     endsAt: z.number().int().nonnegative().max(MAX_DATE_MS).optional(),
+    random: z.boolean().optional(),
   }),
 ]).superRefine((schedule, context) => {
   if (schedule.type === "cron") {

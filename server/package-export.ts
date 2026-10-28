@@ -145,6 +145,7 @@ function portableSchedule(schedule: Routine["schedule"]): PackageRoutineSchedule
       ...(schedule.weekdays === undefined ? {} : { weekdays: [...schedule.weekdays] }),
       ...(schedule.window === undefined ? {} : { window: { ...schedule.window } }),
       ...(schedule.endsAt === undefined ? {} : { endsAt: schedule.endsAt }),
+      ...(schedule.random ? { random: true } : {}),
     };
   }
   return { type: "daily", time: schedule.time, weekdays: [...schedule.weekdays] };

@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n";
 import { atLocalTime } from "@/lib/routine-calendar";
 import type { RoutineSchedule } from "@/lib/routines";
 import { cronScheduleLabel } from "../../shared/cron-label";
@@ -49,6 +50,7 @@ function intervalRestrictions(schedule: Extract<RoutineSchedule, { type: "interv
   if (schedule.endsAt != null) {
     details.push(`until ${new Date(schedule.endsAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}`);
   }
+  if (schedule.random) details.push(t("routines.randomTimesShort"));
   return details;
 }
 
