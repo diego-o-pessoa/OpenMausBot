@@ -30,6 +30,8 @@ export type RoutineRequestSchedule =
     window?: RoutineRequestIntervalWindow;
     /** Inclusive epoch-millisecond cutoff. Missing means never. */
     endsAt?: number;
+    /** Runs once in each interval at a minute drawn for that interval. */
+    random?: boolean;
   };
 
 export type RoutineRequestScheduleChanges =
@@ -44,6 +46,7 @@ export type RoutineRequestScheduleChanges =
     window?: RoutineRequestIntervalWindow | null;
     /** `null` explicitly removes an existing end date. */
     endsAt?: number | null;
+    random?: boolean;
   };
 
 export interface RoutineRequestDefinition {

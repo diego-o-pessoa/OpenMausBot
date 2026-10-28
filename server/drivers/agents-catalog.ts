@@ -53,7 +53,7 @@ const ROUTINE_SCHEDULE_SCHEMA = {
   type: "object",
   additionalProperties: false,
   description:
-    'Use {"type":"cron","expression":"0 9 1 * *","timeZone":"Asia/Kolkata"} for 09:00 on the first of each month, once with at for one future run, weekly with time + weekdays, daily with time, or interval with every_minutes for elapsed-time repetition. Intervals can optionally be limited with weekdays, window_start + window_end, and ends_at.',
+    'Use {"type":"cron","expression":"0 9 1 * *","timeZone":"Asia/Kolkata"} for 09:00 on the first of each month, once with at for one future run, weekly with time + weekdays, daily with time, or interval with every_minutes for elapsed-time repetition. Intervals can optionally be limited with weekdays, window_start + window_end, and ends_at, and random_times runs each one at a random minute inside its interval (every_minutes 240 with window 09:00–21:00 and random_times is three runs a day at random times).',
   properties: {
     type: {
       type: "string",
@@ -122,6 +122,10 @@ const ROUTINE_SCHEDULE_SCHEMA = {
     never_ends: {
       type: "boolean",
       description: "Only for an interval update: true removes an existing end cutoff.",
+    },
+    random_times: {
+      type: "boolean",
+      description: "Optional for type interval: true runs once in each interval at a random minute instead of at its start; false runs at its start again.",
     },
   },
   required: ["type"],

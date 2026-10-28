@@ -23,6 +23,8 @@ export type RoutineSchedule =
     window?: RoutineIntervalWindow;
     /** Inclusive epoch-millisecond cutoff. Missing means never. */
     endsAt?: number;
+    /** Runs once in each interval at a minute drawn for that interval, instead of at its start. */
+    random?: boolean;
   };
 
 export type RoutineScheduleInput =
@@ -38,6 +40,7 @@ export type RoutineScheduleInput =
     window?: RoutineIntervalWindow | null;
     /** `null` explicitly removes an existing end date on updates. */
     endsAt?: number | null;
+    random?: boolean;
   };
 
 export type RoutineRunOn = "maus" | "cloud";

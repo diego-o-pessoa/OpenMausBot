@@ -54,6 +54,7 @@ const scheduleSchema = z.discriminatedUnion("type", [
     weekdays: weekdays.nullable().optional(),
     window: z.object({ start: clock, end: clock }).strict().nullable().optional(),
     endsAt: timestamp.nullable().optional(),
+    random: z.boolean().optional(),
   }).strict(),
   z.object({ type: z.literal("cron"), expression: z.string().max(256), timeZone: z.string().max(128) }).strict(),
 ]).superRefine((value, ctx) => {

@@ -329,6 +329,7 @@ function normalizeSchedule(schedule: RoutineToolScheduleInput, now: number, ownE
       ...(schedule.weekdays == null ? {} : { weekdays: intervalWeekdays(schedule.weekdays) }),
       ...(schedule.window == null ? {} : { window: intervalWindow(schedule.window, schedule.everyMinutes) }),
       ...(endsAt === undefined ? {} : { endsAt }),
+      ...(schedule.random === undefined ? {} : { random: schedule.random }),
     };
   }
   if (!TIME.test(schedule.time)) {
@@ -460,6 +461,7 @@ export function asSchedule(schedule: RoutineRequestSchedule, now: number): Routi
       ...(schedule.weekdays === undefined ? {} : { weekdays: [...schedule.weekdays] }),
       ...(schedule.window === undefined ? {} : { window: { ...schedule.window } }),
       ...(schedule.endsAt === undefined ? {} : { endsAt: schedule.endsAt }),
+      ...(schedule.random ? { random: true } : {}),
     };
   }
   return { type: "daily", time: schedule.time, weekdays: [...schedule.weekdays] };
@@ -482,6 +484,7 @@ function schedulePatch(
       ? { window: schedule.window === null ? null : { ...schedule.window! } }
       : {}),
     ...(Object.hasOwn(schedule, "endsAt") ? { endsAt: schedule.endsAt } : {}),
+    ...(schedule.random === undefined ? {} : { random: schedule.random }),
   };
 }
 
@@ -511,6 +514,7 @@ function effectiveSchedule(
   if (window !== undefined && window !== null) merged.window = { ...window };
   const endsAt = incoming.endsAt === undefined ? previous?.endsAt : incoming.endsAt;
   if (endsAt !== undefined && endsAt !== null) merged.endsAt = endsAt;
+  if (incoming.random ?? previous?.random) merged.random = true;
   return merged;
 }
 

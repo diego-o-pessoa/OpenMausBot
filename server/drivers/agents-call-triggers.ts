@@ -59,7 +59,7 @@ function normalizeScheduleInput(args: Json): NormalizedSchedule {
     : type === "weekly" || type === "daily"
       ? ["type", "time", "weekdays"]
       : type === "interval"
-        ? ["type", "every_minutes", "everyMinutes", "starts_at", "anchorAt", "weekdays", "every_day", "window_start", "window_end", "window", "all_day", "ends_at", "endsAt", "never_ends"]
+        ? ["type", "every_minutes", "everyMinutes", "starts_at", "anchorAt", "weekdays", "every_day", "window_start", "window_end", "window", "all_day", "ends_at", "endsAt", "never_ends", "random_times"]
         : type === "cron"
           ? ["type", "expression", "timeZone"]
           : type === "limit_reset"
@@ -110,7 +110,7 @@ function normalizeScheduleInput(args: Json): NormalizedSchedule {
     return { schedule: { type: "weekly", time, weekdays: normalized } };
   }
   if (type === "interval") {
-    for (const flag of ["every_day", "all_day", "never_ends"]) {
+    for (const flag of ["every_day", "all_day", "never_ends", "random_times"]) {
       if (raw[flag] != null && typeof raw[flag] !== "boolean") {
         return { error: `"${flag}" must be true or false.` };
       }
@@ -186,6 +186,7 @@ function normalizeScheduleInput(args: Json): NormalizedSchedule {
         ...(intervalWeekdays !== undefined ? { weekdays: intervalWeekdays } : {}),
         ...(window !== undefined ? { window } : {}),
         ...(endsAt !== undefined ? { endsAt } : {}),
+        ...(typeof raw.random_times === "boolean" ? { random: raw.random_times } : {}),
       },
     };
   }

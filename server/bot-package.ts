@@ -57,6 +57,7 @@ function intervalScheduleText(
       : null,
     schedule.window ? `during ${schedule.window.start}–${schedule.window.end}` : null,
     schedule.endsAt !== undefined ? `until ${new Date(schedule.endsAt).toISOString()}` : null,
+    schedule.random ? "at a random minute within each interval" : null,
   ].filter((part): part is string => part !== null);
   const cadence = `every ${schedule.everyMinutes} minutes from ${new Date(schedule.anchorAt).toISOString()}`;
   return restrictions.length ? `${cadence}; ${restrictions.join("; ")}` : cadence;

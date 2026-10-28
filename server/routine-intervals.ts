@@ -49,6 +49,7 @@ export function latestIntervalOccurrence(
   schedule: RoutineIntervalSchedule,
   at: number,
 ): number | null {
+  if (schedule.random) return latestRandomIntervalRun(schedule, at);
   const intervalMs = schedule.everyMinutes * 60_000;
   const ceiling = Math.min(at, schedule.endsAt ?? at);
   if (schedule.anchorAt > ceiling) return null;
@@ -60,6 +61,66 @@ export function latestIntervalOccurrence(
     const previous = candidate - intervalMs;
     if (!Number.isSafeInteger(previous) || previous < schedule.anchorAt) return null;
     candidate = previous;
+  }
+  return null;
+}
+
+function slotAllowed(schedule: RoutineIntervalSchedule, slot: number): boolean {
+  return intervalAllowsOccurrence({ ...schedule, endsAt: undefined }, slot);
+}
+
+/** How far into its interval a slot may run: the whole interval, cut at the window's end or midnight, so a run keeps its slot's day. */
+function randomSpanMs(schedule: RoutineIntervalSchedule, slot: number): number {
+  const end = new Date(slot);
+  const endMinutes = schedule.window ? clockMinutes(schedule.window.end)! : 24 * 60;
+  end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
+  return Math.max(60_000, Math.min(schedule.everyMinutes * 60_000, end.getTime() - slot));
+}
+
+/** The drawn minute depends only on the routine's anchor and the slot, so every restart and every computer agrees on it. */
+export function randomIntervalRunAt(schedule: RoutineIntervalSchedule, slot: number): number {
+  const minutes = Math.floor(randomSpanMs(schedule, slot) / 60_000);
+  let hash = 2166136261;
+  for (const char of `${schedule.anchorAt}:${slot}`) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return slot + ((hash >>> 0) % minutes) * 60_000;
+}
+
+function slotAtOrBefore(schedule: RoutineIntervalSchedule, at: number): number {
+  const intervalMs = schedule.everyMinutes * 60_000;
+  return schedule.anchorAt + Math.floor((at - schedule.anchorAt) / intervalMs) * intervalMs;
+}
+
+export function nextRandomIntervalRun(schedule: RoutineIntervalSchedule, after: number): number | null {
+  const intervalMs = schedule.everyMinutes * 60_000;
+  let slot = schedule.anchorAt > after ? schedule.anchorAt : slotAtOrBefore(schedule, after);
+  const maxSlots = Math.ceil(INTERVAL_RESTRICTION_SEARCH_MS / intervalMs) + 2;
+  for (let checked = 0; checked < maxSlots; checked++) {
+    if (schedule.endsAt !== undefined && slot > schedule.endsAt) return null;
+    if (slotAllowed(schedule, slot)) {
+      const run = randomIntervalRunAt(schedule, slot);
+      if (run > after) return schedule.endsAt !== undefined && run > schedule.endsAt ? null : run;
+    }
+    slot += intervalMs;
+    if (!Number.isSafeInteger(slot) || slot > MAX_DATE_MS) return null;
+  }
+  return null;
+}
+
+function latestRandomIntervalRun(schedule: RoutineIntervalSchedule, at: number): number | null {
+  const intervalMs = schedule.everyMinutes * 60_000;
+  const ceiling = Math.min(at, schedule.endsAt ?? at);
+  if (schedule.anchorAt > ceiling) return null;
+  let slot = slotAtOrBefore(schedule, ceiling);
+  const maxSlots = Math.ceil(INTERVAL_RESTRICTION_SEARCH_MS / intervalMs) + 2;
+  for (let checked = 0; checked < maxSlots && slot >= schedule.anchorAt; checked++) {
+    if (slotAllowed(schedule, slot)) {
+      const run = randomIntervalRunAt(schedule, slot);
+      if (run <= ceiling) return run;
+    }
+    slot -= intervalMs;
   }
   return null;
 }
