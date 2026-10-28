@@ -860,11 +860,20 @@ export async function engineCpuLimit(runtime: Runtime, runner: CommandRunner): P
   }
 }
 
+const TIME_ZONE = /^[A-Za-z]+(?:\/[A-Za-z0-9_+-]+)*$/;
+
+/** The server's IANA time zone, which a bot's desktop clock follows; null for UTC or an unusable name. */
+export function hostTimeZone(): string | null {
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return zone && zone !== "UTC" && zone !== "Etc/UTC" && TIME_ZONE.test(zone) ? zone : null;
+}
+
 export function containerRunArgs(
   runtime: Runtime,
   password = "CHANGE_ME",
   target: LocalVmTarget = SHARED_LOCAL_VM_TARGET,
   cpus = VM_CPUS,
+  timeZone: string | null = hostTimeZone(),
 ): string[] {
   if (runtime === "container" && target.key !== SHARED_LOCAL_VM_TARGET.key) {
     throw new Error("Per-bot Local VMs require Docker or Podman because Apple container requires a fixed host port");
@@ -939,6 +948,7 @@ export function containerRunArgs(
       : `type=bind,source=${target.workspaceDir},target=${VM_WORKSPACE_GUEST}`,
     "-e",
     `VNC_PW=${password}`,
+    ...(timeZone && TIME_ZONE.test(timeZone) ? ["-e", `TZ=${timeZone}`] : []),
     "-p",
     target.viewerPort
       ? `127.0.0.1:${target.viewerPort}:${INTERNAL_VIEWER_PORT}`

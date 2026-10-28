@@ -1028,6 +1028,13 @@ describe("setupCommands", () => {
     expect(a.workspaceDir).not.toContain("bot-a");
   });
 
+  it("sets the desktop's clock to the server's time zone, and leaves UTC alone", () => {
+    const args = containerRunArgs("docker", "secret", perBotLocalVmTarget("bot-a"), 2, "America/Sao_Paulo");
+    expect(args[args.indexOf("TZ=America/Sao_Paulo") - 1]).toBe("-e");
+    expect(containerRunArgs("docker", "secret", perBotLocalVmTarget("bot-a"), 2, null).some((arg) => arg.startsWith("TZ="))).toBe(false);
+    expect(containerRunArgs("docker", "secret", perBotLocalVmTarget("bot-a"), 2, "x; rm -rf /").some((arg) => arg.startsWith("TZ="))).toBe(false);
+  });
+
   it("gives a desktop no more CPUs than the engine has, which a 1-CPU VPS needs", async () => {
     const one = runner({ "docker info --format {{.NCPU}}": "1\n" });
     expect(await engineCpuLimit("docker", one.run)).toBe(1);
