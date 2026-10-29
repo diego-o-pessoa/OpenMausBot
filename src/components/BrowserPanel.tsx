@@ -12,7 +12,7 @@ import { TeachBar } from "./browser/TeachBar";
 import { createBrowserControl, streamTransport, type BrowserControl, type BrowserTakeStatus } from "@/lib/browser-control";
 import { resolveAddressBarInput } from "@/lib/browser-address";
 import { closeBrowserPictureInPicture, openBrowserPictureInPicture, supportsBrowserPictureInPicture, useBrowserPictureInPicture } from "@/lib/browser-pip";
-import { browserStreamAccess, createPreviewStreamClient, type PreviewStreamClient, type PreviewStreamControl, type PreviewStreamInput, type PreviewViewportSetting } from "@/lib/browser-stream-client";
+import { browserStreamAccess, createPreviewStreamClient, PREVIEW_STREAM_START_FAILED_CODE, type PreviewStreamClient, type PreviewStreamControl, type PreviewStreamInput, type PreviewViewportSetting } from "@/lib/browser-stream-client";
 import { createLiveStreamClient, type LiveResume, type LiveStreamClient } from "@/lib/browser-stream-v1";
 import { BROWSER_HELD_ELSEWHERE } from "../../shared/browser-held";
 import { passkeyWallAt } from "../../shared/passkey-wall";
@@ -288,7 +288,7 @@ export function LiveBrowser({ bot, signIn }: { bot: Bot; signIn?: BrowserSignIn 
         onFirstFrame={() => setStarting(false)}
         onUnauthorized={() => { if (stream) setFallback(true); else setGone(true); }}
         onGone={() => setGone(true)}
-        onClose={(code, reason) => { if (code === 1013 && reason) setError(reason); }}
+        onClose={(code, reason) => { if ((code === 1013 || code === PREVIEW_STREAM_START_FAILED_CODE) && reason) setError(reason); }}
         onLeave={() => address.current?.focus()}
       />
       {asleep || heldElsewhere || gone || !connected || starting ? (

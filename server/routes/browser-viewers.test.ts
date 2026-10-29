@@ -9,6 +9,7 @@ import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { BrowserHostError, SETUP_COMMAND } from "../browser/chrome/host-setup.ts";
+import { ChromeLaunchError } from "../browser/chrome/launch.ts";
 import type { Audience } from "../audience.ts";
 import type { Download } from "../browser/cdp/downloads.ts";
 import type { DemoStep } from "../browser/demo-recorder.ts";
@@ -300,12 +301,21 @@ describe("the v2 stream", () => {
   it.each([
     { error: new BrowserHostError("sandbox"), need: "sandbox" },
     { error: new BrowserHostError("libraries", ["libnss3.so"]), need: "libraries" },
+    { error: new ChromeLaunchError("sandbox blocked", "No usable sandbox!", new BrowserHostError("sandbox")), need: "sandbox" },
   ])("tells viewers the command that sets up the host ($need)", async ({ error, need }) => {
     const fixture = await serve({ attach: async () => { throw error; } });
     const socket = new WebSocket(`ws://${fixture.origin}/api/bots/pepper/browser/stream`);
     const { code, reason } = await new Promise<{ code: number; reason: string }>((resolve) => socket.addEventListener("close", (event) => resolve({ code: event.code, reason: event.reason })));
     expect(code).toBe(STREAM_CLOSE.hostSetup);
     expect(JSON.parse(reason)).toEqual({ need, command: SETUP_COMMAND });
+  });
+
+  it("tells viewers why the browser could not start", async () => {
+    const fixture = await serve({ attach: async () => { throw new ChromeLaunchError("Chrome exited before answering (code 1).", ""); } });
+    const socket = new WebSocket(`ws://${fixture.origin}/api/bots/pepper/browser/stream`);
+    const { code, reason } = await new Promise<{ code: number; reason: string }>((resolve) => socket.addEventListener("close", (event) => resolve({ code: event.code, reason: event.reason })));
+    expect(code).toBe(STREAM_CLOSE.failed);
+    expect(reason).toBe("The browser could not start: Chrome exited before answering (code 1).");
   });
 });
 

@@ -44,8 +44,8 @@ export interface ChromeProcess {
 export class ChromeLaunchError extends Error {
   readonly output: string;
 
-  constructor(message: string, output: string) {
-    super(message);
+  constructor(message: string, output: string, cause?: Error) {
+    super(message, cause ? { cause } : undefined);
     this.name = "ChromeLaunchError";
     this.output = output;
   }
@@ -121,7 +121,7 @@ export async function launchChrome(options: LaunchOptions): Promise<ChromeProces
     killTree(child, "SIGKILL");
     await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 2_000))]);
     const diagnosis = await diagnoseLaunchFailure({ executable: options.executablePath, output, env }).catch(() => null);
-    throw new ChromeLaunchError(diagnosis?.message ?? (error instanceof Error ? error.message : String(error)), output);
+    throw new ChromeLaunchError(diagnosis?.message ?? (error instanceof Error ? error.message : String(error)), output, diagnosis ?? undefined);
   }
   const pid = child.pid!;
   options.registry?.add({ pid, startTime: null, userDataDir: options.userDataDir, ownerPid: process.pid, launchedAt: new Date().toISOString() });
