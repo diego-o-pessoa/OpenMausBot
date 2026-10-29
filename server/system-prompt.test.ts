@@ -434,3 +434,21 @@ it("keeps setup right after the standing instructions it overrides, and the rule
   ]);
   expect(built.sections.map((s) => s.id)).toEqual(["persona", "soul", "setup", "autonomy", "memory"]);
 });
+
+describe("language", () => {
+  it("names the person's app language for every message, routines included, in the stable half", async () => {
+    const { languagePrompt } = await import("./system-prompt.ts");
+    expect(languagePrompt("pt-br")).toContain("the person reads this app in Brazilian Portuguese");
+    expect(languagePrompt("pt-br")).toContain("also during routines");
+    const built = buildSystemPrompt("You are Kiwi.", "", [], undefined, { language: "pt-br" });
+    expect(built.sections.map((s) => s.id)).toEqual(["persona", "language", "autonomy"]);
+    expect(built.stable).toContain("Brazilian Portuguese");
+  });
+
+  it("adds nothing for an unset or unknown language", async () => {
+    const { languagePrompt } = await import("./system-prompt.ts");
+    expect(languagePrompt(undefined)).toBe("");
+    expect(languagePrompt("")).toBe("");
+    expect(languagePrompt("not a language!")).toBe("");
+  });
+});
