@@ -26,6 +26,8 @@ async function start(env: Record<string, string> = {}) {
     if (req.method === "POST" && req.url === "/ofertas") return json(201, { oferta: { id: 12, status: "rascunho" }, pronta: true, falta: [], divergencias: [] });
     if (req.method === "POST" && req.url === "/ofertas/7/postar") return json(403, { erro: "A #7 não é sua: quem criou foi uma pessoa do grupo." });
     if (req.method === "POST" && req.url === "/janelas") return json(422, { erro: "Nenhuma das ofertas está pronta para agendar.", recusadas: [{ id: 3, motivo: "falta foto" }] });
+    if (req.method === "POST" && req.url === "/ofertas/12/editar") return json(200, { oferta: { id: 12, ...body } });
+    if (req.method === "POST" && req.url === "/grupo/mensagem") return json(200, { ok: true });
     if (req.method === "GET" && req.url === "/situacao") return json(200, { postadas_hoje: 2, limite_do_dia: 18 });
     if (req.method === "GET" && req.url === "/ofertas?dias=3") return json(200, { ofertas: [] });
     return json(404, { erro: "unexpected" });
@@ -69,7 +71,9 @@ it("lists the offer tools and none that reach settings", async () => {
   await start();
   expect(await toolNames()).toEqual([
     "ofertas_criar", "ofertas_ver", "ofertas_recentes", "ofertas_postar", "ofertas_whatsapp",
-    "ofertas_descartar", "ofertas_agendar_janela", "ofertas_situacao", "ofertas_buscar_shopee",
+    "ofertas_descartar", "ofertas_editar", "ofertas_cupom", "ofertas_pra_fila", "ofertas_kit",
+    "ofertas_marketeiro", "ofertas_mensagem_grupo", "ofertas_agendar_janela", "ofertas_situacao",
+    "ofertas_buscar_shopee",
   ]);
 });
 
@@ -79,6 +83,15 @@ it("forwards a new offer with the token and returns the bot's preview", async ()
   expect(created.error, created.text).toBe(false);
   expect(JSON.parse(created.text)).toMatchObject({ oferta: { id: 12 }, pronta: true });
   expect(calls).toEqual([{ method: "POST", path: "/ofertas", body: { link: "https://meli.la/abc", cupom: "TECH10", cupom_pct: 10 }, auth: "Bearer fixture-token" }]);
+});
+
+it("sends an edit's fields without the id, and a group message as text", async () => {
+  await start();
+  const edited = await tool("ofertas_editar", { id: 12, pix: 85.4, cupom: null });
+  expect(JSON.parse(edited.text)).toEqual({ oferta: { id: 12, pix: 85.4, cupom: null } });
+  expect(calls[0]).toMatchObject({ method: "POST", path: "/ofertas/12/editar", body: { pix: 85.4, cupom: null } });
+  expect((await tool("ofertas_mensagem_grupo", { texto: "Janela da manhã: 4 agendadas" })).error).toBe(false);
+  expect(calls[1]).toMatchObject({ path: "/grupo/mensagem", body: { texto: "Janela da manhã: 4 agendadas" } });
 });
 
 it("passes the bot's refusals through as tool errors, with their details", async () => {
