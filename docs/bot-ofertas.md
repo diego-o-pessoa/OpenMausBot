@@ -8,11 +8,13 @@ create, post, send to WhatsApp and schedule offers. It replaces operating the bo
 
 This server only forwards. The rules are enforced by bot-ofertas itself:
 
-- the agent only touches offers it created;
+- the agent only touches offers it created (unless `API_TODAS_AS_OFERTAS=true`);
 - the daily limit (`MAX_POR_DIA`) counts every post, by people and agents;
 - an offer is never posted twice, and the same product cannot come back for 7 days;
 - there is no settings route;
 - with `API_APROVACAO=true`, an agent's offer goes out only after someone in the group taps **👍 Aprovar**.
+  There is no tool to approve: an agent cannot approve its own offers. For it to work alone, set
+  `API_APROVACAO=false`.
 
 Every step shows in the group ("🤖 Samu criou #12", "🤖 Samu postou #12"), with the usual buttons, so people
 can still discard an offer.
@@ -25,6 +27,9 @@ Tools:
 - `ofertas_postar`
 - `ofertas_whatsapp`
 - `ofertas_descartar`
+- `ofertas_editar`, `ofertas_cupom`, `ofertas_pra_fila`, `ofertas_kit` and `ofertas_marketeiro`: the same as the
+  ✏️ Editar, cupom, 🕒 Pra fila, 🎁 Kit and 📣 Marketeiro buttons
+- `ofertas_mensagem_grupo`: the window summary or an alert in the group, always signed with the agent's name
 - `ofertas_agendar_janela`
 - `ofertas_situacao`
 - `ofertas_buscar_shopee`
@@ -57,7 +62,7 @@ The agent's turn ends right after the call.
      that is `/home/openmausbot/OpenMausBot/scripts/bot-ofertas-mcp.mjs`.
    - Environment: `BOT_OFERTAS_TOKEN=` set to the `API_TOKEN`. If the port is not 8090, also set
      `BOT_OFERTAS_URL=http://127.0.0.1:PORT`.
-   - Name it `bot-ofertas`, choose **Test**, check the nine tools, and turn it on for the posting bot.
+   - Name it `bot-ofertas`, choose **Test**, check the fifteen tools, and turn it on for the posting bot.
 3. For a bot that only checks the day, add a second server named `bot-ofertas-leitura` with the same command,
    `BOT_OFERTAS_TOKEN` set to the `API_TOKEN_LEITURA` and `BOT_OFERTAS_SOMENTE_LEITURA=1`.
 4. Remove any Telegram Web skill from the posting bot, and set its computer to **Off**: it no longer needs a
