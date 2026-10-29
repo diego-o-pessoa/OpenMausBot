@@ -61,9 +61,11 @@ export function setLanguageChoice(language: string): void {
   notify();
 }
 
+/** The choice to store on the server. Another computer's server takes it only while it has none, so a second
+ * window never overrides the language its owner set there. */
 export function languageToSave(choice: string | null, saved: string | undefined, ownComputer: boolean): string | null {
-  if (!ownComputer || choice === null || saved === undefined) return null;
-  return choice === saved ? null : choice;
+  if (choice === null || saved === undefined || choice === saved) return null;
+  return ownComputer || (saved === "" && choice !== "") ? choice : null;
 }
 
 export function useLanguageChoice(): string | null {

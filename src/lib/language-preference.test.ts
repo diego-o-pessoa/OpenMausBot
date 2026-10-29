@@ -118,4 +118,11 @@ describe("languageToSave", () => {
     expect(languageToSave("pt-br", undefined, true)).toBeNull();
     expect(languageToSave("pt-br", "en", false)).toBeNull();
   });
+
+  it("tells another computer's server the choice once, while that server has none", async () => {
+    const { languageToSave } = await import("./language-preference");
+    expect(languageToSave("pt-br", "", false)).toBe("pt-br");
+    expect(languageToSave("", "", false)).toBeNull();
+    expect(languageToSave("", "pt-br", false)).toBeNull();
+  });
 });

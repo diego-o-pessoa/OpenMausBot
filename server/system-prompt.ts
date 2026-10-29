@@ -43,6 +43,17 @@ export const AUTONOMY_PROMPT =
 export const CONVERSATIONAL_STYLE_PROMPT =
   "\n\nReply style: conversational. Talk like a person in a chat. Keep replies short unless the person asks for detail. Use plain text with no headings, bullet lists, tables or bold unless the person asks for them or the content truly needs them; code always goes in a fenced code block. Send each distinct point as its own short message, separated by a blank line, in the order you find things. When it helps, end with one brief follow-up question. Match the person's language and roughly the length of their message.\n";
 
+/** The person's chosen app language as a standing rule; null when unknown or unnamed, so the generic rule in
+ * AUTONOMY_PROMPT stands. A routine's turn has no person writing, so "their language" alone falls back to English. */
+export function languagePrompt(language: string | undefined): string {
+  const code = language?.trim();
+  if (!code) return "";
+  let name: string | undefined;
+  try { name = new Intl.DisplayNames(["en"], { type: "language" }).of(code); } catch { return ""; }
+  if (!name || name.toLowerCase() === code.toLowerCase()) return "";
+  return `\n\nLanguage: the person reads this app in ${name}. Write everything they read in ${name}: replies, questions, summaries and the short notes you send between actions about what you are doing or found, also during routines. Keep names of buttons, pages, files and products as they appear.\n`;
+}
+
 export function replyStylePrompt(style: ReplyStyle | undefined): string {
   return isConversational(style) ? CONVERSATIONAL_STYLE_PROMPT : "";
 }
@@ -66,7 +77,7 @@ export function buildSystemPrompt(
   soul: string,
   parts: PromptPart[],
   agents?: { env?: Record<string, string | undefined> },
-  opts?: { replyStyle?: ReplyStyle },
+  opts?: { replyStyle?: ReplyStyle; language?: string },
 ): { text: string; sections: PromptSection[]; stable: string; volatile: string } {
   const ordered: PromptPart[] = [
     { id: "persona", label: "Identity", text: persona },
@@ -74,6 +85,7 @@ export function buildSystemPrompt(
     // Right after the soul: on a direct turn, ahead of every section that names a tool.
     { id: "tool-bridge", label: "Tool search", text: agentsToolBridged(agents) ? AGENTS_TOOL_BRIDGE_PROMPT : "" },
     { id: "reply-style", label: "Reply style", text: replyStylePrompt(opts?.replyStyle) },
+    { id: "language", label: "Language", text: languagePrompt(opts?.language) },
     ...withAutonomy(parts),
   ];
   const sections = ordered
