@@ -20,6 +20,7 @@ import {
   pillPath,
   trackDurationMs,
   trackFaceAt,
+  turnEye,
 } from "./sphere-mascot";
 
 describe("activityForState", () => {
@@ -157,5 +158,34 @@ describe("eyes", () => {
 
   it("draws a dot when length and width match", () => {
     expect(pillPath(0.3, 0.3)).toContain("A0.1500 0.1500");
+  });
+});
+
+describe("a sphere that turns", () => {
+  const front = FRONT_FACE.eyes[0];
+
+  it("leaves an unturned eye where it is", () => {
+    expect(turnEye(front, 0, 0)).toMatchObject({ x: front.x, y: front.y, squashX: 1, squashY: 1, shown: 1 });
+  });
+
+  it("rolls an eye up and flattens it as it nears the top, hides it round the back, and brings it in from below", () => {
+    const rising = turnEye(front, 0.15, 0);
+    expect(rising.y).toBeGreaterThan(0.5);
+    expect(rising.squashY).toBeLessThan(0.7);
+    expect(turnEye(front, 0.5, 0).shown).toBe(0);
+    expect(turnEye(front, 0.85, 0).y).toBeLessThan(-0.5);
+    expect(turnEye(front, 1, 0).y).toBeCloseTo(front.y, 5);
+  });
+
+  it("turns an eye to the right, round the back and in from the left", () => {
+    expect(turnEye(front, 0, 0.15).x).toBeGreaterThan(front.x + 0.3);
+    expect(turnEye(front, 0, 0.5).shown).toBe(0);
+    expect(turnEye(front, 0, 0.85).x).toBeLessThan(-0.6);
+  });
+
+  it("blends a turn the short way round, so the end of one turn and a fresh start agree", () => {
+    const late = { ...FRONT_FACE, roll: 0.95 };
+    const fresh = { ...FRONT_FACE, roll: 0 };
+    expect(mixFace(late, fresh, 0.5).roll).toBeCloseTo(0.975, 5);
   });
 });

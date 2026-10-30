@@ -108,12 +108,16 @@ describe("the mascot on the shared clock", () => {
   });
 
   it("keeps an agent still when only a still mascot of it shows a busy expression", () => {
+    const random = vi.spyOn(Math, "random").mockReturnValue(0.5);
     render([
       { state: "idle", size: 36, syncKey: "maya" },
       { state: "working", size: 24, animated: false, syncKey: "maya" },
     ]);
+    run(1000);
+    frameRequests = 0;
     run(3000);
-    expect(mascotClock().pending()).toBe(0);
+    expect(frameRequests).toBe(0);
+    random.mockRestore();
   });
 
   it("comes to rest when a row stops moving as its agent's work ends", () => {
@@ -133,18 +137,23 @@ describe("the mascot on the shared clock", () => {
     expect(mascotClock().pending()).toBe(2);
   });
 
-  it("lets a small idle mascot settle to no frames, and wakes it for a blink", () => {
+  it("rests between the blinks it gives on its own, drawing nothing while it waits", () => {
+    const random = vi.spyOn(Math, "random").mockReturnValue(0.5);
     const ref = createRef<MausAvatarHandle>();
     render([{ state: "idle", size: 24, ref }]);
-    run(3000);
-    expect(mascotClock().pending()).toBe(0);
+    run(1000);
     frameRequests = 0;
-    run(2000);
+    run(3000);
+    expect(frameRequests).toBe(0);
+    run(1000);
+    expect(frameRequests).toBeGreaterThan(3);
+    frameRequests = 0;
+    run(1500);
     expect(frameRequests).toBe(0);
     act(() => ref.current!.blink());
     run(500);
     expect(frameRequests).toBeGreaterThan(5);
-    expect(mascotClock().pending()).toBe(0);
+    random.mockRestore();
   });
 
   it("stops drawing a mascot that leaves the screen", () => {

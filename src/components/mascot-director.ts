@@ -12,23 +12,29 @@ import {
   type MascotActivity,
 } from "./sphere-mascot";
 
-type Gesture = MascotClipName | "dots";
+type Spin = "spinUp" | "spinRight";
+type Gesture = MascotClipName | "dots" | Spin | "quill";
 
 /** Which of Grok's measured gestures fit each kind of work. */
 export const REPERTOIRE: Readonly<Record<Exclude<MascotActivity, "idle">, readonly Gesture[]>> = {
-  thinking: ["dots", "downScanA", "downScanB", "downScanC", "ovalPonder", "shrinkPeek", "glanceLeft", "peekLeft"],
+  thinking: ["dots", "downScanA", "downScanB", "downScanC", "ovalPonder", "shrinkPeek", "glanceLeft", "peekLeft", "spinUp"],
   reading: ["downScanA", "downScanB", "downScanC", "glanceLeft", "peekLeft", "ovalPonder"],
-  command: ["attentive", "glanceUp", "frontBlink", "glanceUpAgain", "rollThrough", "glanceUpLater", "rollDown", "squintGlance", "dropAndBack"],
-  writing: ["frontBlink", "attentive", "downScanA", "downScanC", "squintGlance"],
-  looking: ["rollAway", "lookUpRight", "glanceUpLeft", "glanceUp", "squintGlance", "glanceLeft"],
+  command: ["attentive", "glanceUp", "frontBlink", "glanceUpAgain", "rollThrough", "glanceUpLater", "rollDown", "squintGlance", "dropAndBack", "spinUp", "spinRight"],
+  writing: ["quill", "frontBlink", "attentive", "quill", "downScanA", "squintGlance"],
+  looking: ["rollAway", "lookUpRight", "glanceUpLeft", "glanceUp", "squintGlance", "glanceLeft", "spinRight"],
 };
+
+/** What a resting mascot does now and then, so it never sits frozen. */
+export const IDLE_GESTURES: readonly Gesture[] = ["frontBlink", "glanceLeft", "lookUpRight", "glanceUpLeft", "peekLeft", "spinRight", "spinUp"];
 
 type Act =
   | { kind: "clip"; name: MascotClipName }
   | { kind: "fold" }
   | { kind: "dots"; ms: number }
   | { kind: "unfold" }
-  | { kind: "hold"; face: Face; ms: number };
+  | { kind: "hold"; face: Face; ms: number }
+  | { kind: "spin"; name: Spin }
+  | { kind: "quill" };
 
 const FADE_MS = 250;
 const FOLD_EYES_MS = 300;
@@ -39,6 +45,11 @@ const OPENING_DOTS_MS = 3 * DOT_CYCLE_MS;
 const DOTS_GESTURE_MS = 2 * DOT_CYCLE_MS;
 const FRONT_HOLD_MS = 5000;
 const UNREPEATED = 3;
+export const SPIN_MS = 950;
+const QUILL_IN_MS = 420;
+const QUILL_WRITE_MS = 2100;
+const QUILL_OUT_MS = 420;
+export const QUILL_MS = QUILL_IN_MS + QUILL_WRITE_MS + QUILL_OUT_MS;
 
 const ease = (t: number) => {
   const k = Math.max(0, Math.min(1, t));
@@ -62,6 +73,10 @@ function actMs(act: Act): number {
       return FOLD_MS;
     case "unfold":
       return UNFOLD_MS;
+    case "spin":
+      return SPIN_MS;
+    case "quill":
+      return QUILL_MS;
     default:
       return act.ms;
   }
@@ -97,7 +112,7 @@ export class MascotDirector {
   /** The gesture playing now, for tests and previews. */
   get current(): string | null {
     if (!this.act) return null;
-    return this.act.kind === "clip" ? this.act.name : this.act.kind;
+    return this.act.kind === "clip" || this.act.kind === "spin" ? this.act.name : this.act.kind;
   }
 
   setActivity(next: MascotActivity, now: number, shown: Face): void {
@@ -110,7 +125,16 @@ export class MascotDirector {
     }
     this.inFinale = false;
     const opening = was === "idle" && next === "thinking";
-    this.cut(opening ? [{ kind: "fold" }, { kind: "dots", ms: OPENING_DOTS_MS }, { kind: "unfold" }] : this.pick(next), now, shown);
+    const plan: Act[] = opening
+      ? [{ kind: "fold" }, { kind: "dots", ms: OPENING_DOTS_MS }, { kind: "unfold" }]
+      : next === "writing" ? this.planOf("quill") : this.pick(next);
+    this.cut(plan, now, shown);
+  }
+
+  /** One small gesture while resting; nothing if it is already performing. */
+  stir(now: number, shown: Face): void {
+    if (this.act || this.activity !== "idle") return;
+    this.begin(this.planOf(this.choose(IDLE_GESTURES)), now, shown);
   }
 
   /** Plays the smile and hops on request; a finale already under way is left to finish. */
@@ -148,14 +172,22 @@ export class MascotDirector {
   }
 
   private pick(activity: Exclude<MascotActivity, "idle">): Act[] {
-    const repertoire = REPERTOIRE[activity];
+    return this.planOf(this.choose(REPERTOIRE[activity]));
+  }
+
+  private choose(repertoire: readonly Gesture[]): Gesture {
     const fresh = repertoire.filter((gesture) => !this.recent.includes(gesture));
     const choices = fresh.length > 0 ? fresh : repertoire;
     const gesture = choices[Math.min(choices.length - 1, Math.floor(this.random() * choices.length))];
     this.recent = [gesture, ...this.recent].slice(0, UNREPEATED);
-    return gesture === "dots"
-      ? [{ kind: "fold" }, { kind: "dots", ms: DOTS_GESTURE_MS }, { kind: "unfold" }]
-      : [{ kind: "clip", name: gesture }];
+    return gesture;
+  }
+
+  private planOf(gesture: Gesture): Act[] {
+    if (gesture === "dots") return [{ kind: "fold" }, { kind: "dots", ms: DOTS_GESTURE_MS }, { kind: "unfold" }];
+    if (gesture === "spinUp" || gesture === "spinRight") return [{ kind: "spin", name: gesture }];
+    if (gesture === "quill") return [{ kind: "quill" }];
+    return [{ kind: "clip", name: gesture }];
   }
 
   private cut(plan: Act[], now: number, shown: Face): void {
@@ -198,6 +230,10 @@ export class MascotDirector {
         return mixFace(this.from, clipFaceAt(act.name, elapsed), fade);
       case "hold":
         return mixFace(this.from, act.face, fade);
+      case "spin":
+        return spinFace(this.from, act.name, elapsed);
+      case "quill":
+        return quillFace(this.from, elapsed);
       case "fold":
         if (elapsed < FOLD_EYES_MS) return mixFace(this.from, DOTS_FACE, ease(elapsed / FOLD_EYES_MS));
         return { ...DOTS_FACE, dots: ease((elapsed - FOLD_EYES_MS) / (FOLD_MS - FOLD_EYES_MS)), beat: [0, 1, 0] };
@@ -211,6 +247,45 @@ export class MascotDirector {
         };
     }
   }
+}
+
+/**
+ * A full turn of the sphere, fast in the middle, with speed lines trailing it. The turn itself is never faded
+ * in from the previous face: blending a turn would run it the short way round, backwards.
+ */
+function spinFace(from: Face, name: Spin, elapsed: number): Face {
+  const t = Math.min(1, elapsed / SPIN_MS);
+  const turn = t >= 1 ? 0 : ease(t);
+  const rush = t >= 1 ? 0 : Math.sin(Math.PI * t);
+  const up = name === "spinUp";
+  const front = mixFace(from, FRONT_FACE, ease(elapsed / FADE_MS));
+  return {
+    ...front,
+    stretchX: front.stretchX * (up ? 1 - 0.05 * rush : 1 + 0.07 * rush),
+    stretchY: front.stretchY * (up ? 1 + 0.07 * rush : 1 - 0.05 * rush),
+    y: front.y + (up ? 0.16 * rush : 0),
+    x: front.x + (up ? 0 : 0.1 * rush),
+    roll: up ? turn : 0,
+    yaw: up ? 0 : turn,
+    wind: rush === 0 ? 0 : up ? rush : -rush,
+  };
+}
+
+/** A gesture the director stages itself, `elapsed` ms in, starting from the front face: for previews and tests. */
+export function stagedFace(gesture: Spin | "quill", elapsed: number): Face {
+  return gesture === "quill" ? quillFace(FRONT_FACE, elapsed) : spinFace(FRONT_FACE, gesture, elapsed);
+}
+
+/** The body narrows into a quill, writes a line, and swells back into itself. */
+function quillFace(from: Face, elapsed: number): Face {
+  const front = mixFace(from, FRONT_FACE, ease(elapsed / FADE_MS));
+  const into = ease(elapsed / QUILL_IN_MS);
+  const back = ease((elapsed - QUILL_IN_MS - QUILL_WRITE_MS) / QUILL_OUT_MS);
+  return {
+    ...front,
+    quill: into * (1 - back),
+    ink: Math.max(0, Math.min(1, (elapsed - QUILL_IN_MS) / QUILL_WRITE_MS)),
+  };
 }
 
 const shared = new Map<string, { director: MascotDirector; users: number }>();
