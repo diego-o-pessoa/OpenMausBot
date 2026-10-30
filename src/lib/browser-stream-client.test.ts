@@ -193,13 +193,24 @@ describe("preview stream downloads, uploads and messages", () => {
     expect(onViewport).toHaveBeenCalledWith({ width: 1280, height: 800 });
   });
 
-  it("stops on a gone browser or a host that needs setup, and treats a refused upgrade as unauthorized", () => {
+  it("stops on a gone browser, one that could not start or a host that needs setup, and treats a refused upgrade as unauthorized", () => {
     const onGone = vi.fn();
     const onHostSetup = vi.fn();
     const onUnauthorized = vi.fn();
     createPreviewStreamClient(target, events({ onGone }));
     FakeSocket.current.closeWith(4404, "gone");
     expect(onGone).toHaveBeenCalledOnce();
+    vi.useFakeTimers();
+    const failed = vi.fn();
+    const onClose = vi.fn();
+    createPreviewStreamClient(target, events({ onGone: failed, onClose }));
+    const socket = FakeSocket.current;
+    FakeSocket.current.closeWith(1011, "The browser could not start: Chrome exited before answering (code 1).");
+    expect(failed).toHaveBeenCalledOnce();
+    expect(onClose).toHaveBeenCalledWith(1011, "The browser could not start: Chrome exited before answering (code 1).");
+    vi.advanceTimersByTime(30_000);
+    expect(FakeSocket.current).toBe(socket);
+    vi.useRealTimers();
     createPreviewStreamClient(target, events({ onHostSetup }));
     FakeSocket.current.closeWith(4503, JSON.stringify({ need: "libraries", command: "sudo openmausbot browser setup" }));
     expect(onHostSetup).toHaveBeenCalledWith({ need: "libraries", command: "sudo openmausbot browser setup" });

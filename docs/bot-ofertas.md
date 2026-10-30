@@ -33,8 +33,10 @@ Tools:
 - `ofertas_agendar_janela`
 - `ofertas_situacao`
 - `ofertas_buscar_shopee`
+- `ofertas_funil`: filters and ranks a list of products without AI and without creating anything (price floor per
+  category, banned words, discount, rating, sales, and products posted in the last 7 days)
 
-With `BOT_OFERTAS_SOMENTE_LEITURA=1`, only `ofertas_ver`, `ofertas_recentes` and `ofertas_situacao` are listed,
+With `BOT_OFERTAS_SOMENTE_LEITURA=1`, only `ofertas_ver`, `ofertas_recentes`, `ofertas_situacao` and `ofertas_funil` are listed,
 and the others are refused before any call. This is the setup for a bot that only checks the day.
 
 `ofertas_agendar_janela` hands a posting window to bot-ofertas:
@@ -62,7 +64,7 @@ The agent's turn ends right after the call.
      that is `/home/openmausbot/OpenMausBot/scripts/bot-ofertas-mcp.mjs`.
    - Environment: `BOT_OFERTAS_TOKEN=` set to the `API_TOKEN`. If the port is not 8090, also set
      `BOT_OFERTAS_URL=http://127.0.0.1:PORT`.
-   - Name it `bot-ofertas`, choose **Test**, check the fifteen tools, and turn it on for the posting bot.
+   - Name it `bot-ofertas`, choose **Test**, check the sixteen tools, and turn it on for the posting bot.
 3. For a bot that only checks the day, add a second server named `bot-ofertas-leitura` with the same command,
    `BOT_OFERTAS_TOKEN` set to the `API_TOKEN_LEITURA` and `BOT_OFERTAS_SOMENTE_LEITURA=1`.
 4. Remove any Telegram Web skill from the posting bot, and set its computer to **Off**: it no longer needs a

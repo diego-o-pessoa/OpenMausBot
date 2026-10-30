@@ -30,6 +30,13 @@ export const STREAM_CLOSE = {
   failed: 1011,
 } as const;
 
+function hostSetupError(error: unknown): BrowserHostError | null {
+  for (let current = error; current instanceof Error; current = current.cause) {
+    if (current instanceof BrowserHostError) return current;
+  }
+  return null;
+}
+
 const DEFAULT_QUALITY = 70;
 const MAX_SOCKET_BUFFER_BYTES = 8 * 1024 * 1024;
 const MAX_UNACKNOWLEDGED_FRAMES = 64;
@@ -289,8 +296,9 @@ export class StreamV2 {
       if (session.closed || session.closing) await viewer.close();
       else session.attached(viewer, this.#service);
     } catch (error) {
-      if (error instanceof BrowserHostError) session.close(STREAM_CLOSE.hostSetup, JSON.stringify({ need: error.kind, command: SETUP_COMMAND }));
-      else session.close(STREAM_CLOSE.failed, "The browser could not start.");
+      const host = hostSetupError(error);
+      if (host) session.close(STREAM_CLOSE.hostSetup, JSON.stringify({ need: host.kind, command: SETUP_COMMAND }));
+      else session.close(STREAM_CLOSE.failed, `The browser could not start: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

@@ -6,6 +6,7 @@
 /** The browser's host cannot run Chrome until it is set up; the close reason names the fix. */
 export const PREVIEW_STREAM_HOST_SETUP_CLOSE_CODE = 4503;
 export const PREVIEW_STREAM_TAB_GONE_CODE = 4404;
+export const PREVIEW_STREAM_START_FAILED_CODE = 1011;
 
 export interface PreviewStreamHostSetup {
   readonly need: "sandbox" | "libraries";
@@ -430,7 +431,7 @@ export function createPreviewStreamClient(
       if (opened) events.onConnectedChange(false);
       if (stopped) return;
       events.onClose?.(event.code, event.reason);
-      if (event.code === PREVIEW_STREAM_TAB_GONE_CODE) {
+      if (event.code === PREVIEW_STREAM_TAB_GONE_CODE || event.code === PREVIEW_STREAM_START_FAILED_CODE) {
         stopped = true;
         events.onGone?.();
         return;

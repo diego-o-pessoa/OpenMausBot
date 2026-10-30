@@ -170,12 +170,12 @@ const TOOLS = [
   {
     name: "ofertas_agendar_janela",
     readOnly: false,
-    description: "Agenda uma janela de postagem (manha, almoco ou noite) com as suas ofertas prontas, na ordem de preferência. O bot sorteia quantas saem (normalmente 3 a 6, sem passar do limite do dia) e em que horários, posta cada uma no horário, manda no WhatsApp depois de uma pausa e descarta as sobras quando a janela acaba. Devolve os horários sorteados, as sobras e as recusadas com o motivo. Depois disso você não precisa esperar: a janela anda sozinha.",
+    description: "Agenda uma janela de postagem (manha, almoco, tarde ou noite, conforme as JANELAS do bot) com as suas ofertas prontas, na ordem de preferência. O bot sorteia os horários (com JANELA_RITMO, um post a cada N a M minutos até o fim da janela; sem ele, 3 a 6 posts), sem passar do limite do dia, posta cada uma no horário, manda no WhatsApp depois de uma pausa e descarta as sobras quando a janela acaba. Devolve os horários sorteados, as sobras e as recusadas com o motivo. Depois disso você não precisa esperar: a janela anda sozinha.",
     inputSchema: {
       type: "object", additionalProperties: false,
       properties: {
         ids: { type: "array", items: { type: "integer" }, minItems: 1, description: "Números das ofertas, da melhor para a pior." },
-        janela: { type: "string", description: "manha, almoco ou noite." },
+        janela: { type: "string", description: "manha, almoco, tarde ou noite." },
       },
       required: ["ids", "janela"],
     },
@@ -195,6 +195,25 @@ const TOOLS = [
     inputSchema: { type: "object", additionalProperties: false, properties: { palavra: { type: "string" } }, required: ["palavra"] },
     run: (args) => call("POST", "/shopee/buscar", { palavra: args?.palavra }),
   },
+  {
+    name: "ofertas_funil",
+    readOnly: true,
+    description: "Filtra e ordena uma lista de produtos sem IA e sem criar nada: tira preço baixo demais para a categoria, palavra proibida (elástico, fita, corda...), desconto abaixo do mínimo, nota ou vendas baixas e o que já saiu nos últimos 7 dias. Devolve os escolhidos da maior nota para a menor (os temas da janela na frente) e os recusados com o motivo. Use antes de abrir qualquer página de produto.",
+    inputSchema: {
+      type: "object", additionalProperties: false,
+      properties: {
+        janela: { type: "string", description: "manha, almoco, tarde ou noite: os temas dela vêm na frente." },
+        limite: { type: "integer", minimum: 1, maximum: 60, description: "Quantos escolhidos devolver (padrão 15)." },
+        candidatos: {
+          type: "array", minItems: 1, maxItems: 300,
+          description: "Os produtos, com o que a lista mostra: titulo, categoria (tecnologia, games, eletrodomesticos, tenis, moda_masculina, moda_feminina, academia, casa, cozinha, beleza), preco_por, preco_de, vendidos (ex.: \"+1.000\"), nota, item_id (ex.: MLB123) e link.",
+          items: { type: "object" },
+        },
+      },
+      required: ["candidatos"],
+    },
+    run: (args) => call("POST", "/funil", { candidatos: args?.candidatos, ...(args?.janela ? { janela: args.janela } : {}), ...(args?.limite ? { limite: args.limite } : {}) }),
+  },
 ];
 
 const visibleTools = () => TOOLS.filter((tool) => !READ_ONLY || tool.readOnly);
@@ -211,7 +230,7 @@ async function handle(request) {
       capabilities: { tools: {} },
       serverInfo: { name: "bot-ofertas", version: "1.0.0" },
       instructions: READ_ONLY
-        ? "Ferramentas só de leitura do bot de ofertas: confira o dia com ofertas_situacao e ofertas_recentes."
+        ? "Ferramentas só de leitura do bot de ofertas: confira o dia com ofertas_situacao e ofertas_recentes, e filtre produtos com ofertas_funil."
         : "Use estas ferramentas para tudo no bot de ofertas; nunca opere o bot pelo Telegram Web. As travas (só as suas ofertas, limite do dia, sem repetir) estão no bot.",
     } });
   }
