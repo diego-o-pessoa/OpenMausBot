@@ -30,6 +30,7 @@ async function start(env: Record<string, string> = {}) {
     if (req.method === "POST" && req.url === "/grupo/mensagem") return json(200, { ok: true });
     if (req.method === "GET" && req.url === "/situacao") return json(200, { postadas_hoje: 2, limite_do_dia: 18 });
     if (req.method === "GET" && req.url === "/ofertas?dias=3") return json(200, { ofertas: [] });
+    if (req.method === "POST" && req.url === "/funil") return json(200, { escolhidos: [{ titulo: "Tênis" }], recusados: [] });
     return json(404, { erro: "unexpected" });
   });
   await new Promise<void>((resolve) => api.listen(0, "127.0.0.1", resolve));
@@ -73,7 +74,7 @@ it("lists the offer tools and none that reach settings", async () => {
     "ofertas_criar", "ofertas_ver", "ofertas_recentes", "ofertas_postar", "ofertas_whatsapp",
     "ofertas_descartar", "ofertas_editar", "ofertas_cupom", "ofertas_pra_fila", "ofertas_kit",
     "ofertas_marketeiro", "ofertas_mensagem_grupo", "ofertas_agendar_janela", "ofertas_situacao",
-    "ofertas_buscar_shopee",
+    "ofertas_buscar_shopee", "ofertas_funil",
   ]);
 });
 
@@ -107,12 +108,15 @@ it("passes the bot's refusals through as tool errors, with their details", async
 
 it("hides and refuses every tool that changes something in read-only mode", async () => {
   await start({ BOT_OFERTAS_SOMENTE_LEITURA: "1" });
-  expect(await toolNames()).toEqual(["ofertas_ver", "ofertas_recentes", "ofertas_situacao"]);
+  expect(await toolNames()).toEqual(["ofertas_ver", "ofertas_recentes", "ofertas_situacao", "ofertas_funil"]);
   const refused = await tool("ofertas_postar", { id: 12 });
   expect(refused.error).toBe(true);
   expect(calls).toEqual([]);
   expect(JSON.parse((await tool("ofertas_situacao")).text)).toEqual({ postadas_hoje: 2, limite_do_dia: 18 });
   expect(JSON.parse((await tool("ofertas_recentes", { dias: 3 })).text)).toEqual({ ofertas: [] });
+  const candidatos = [{ titulo: "Tênis", categoria: "tenis", preco_por: 249.9, preco_de: 399.9 }];
+  expect(JSON.parse((await tool("ofertas_funil", { janela: "manha", candidatos })).text)).toEqual({ escolhidos: [{ titulo: "Tênis" }], recusados: [] });
+  expect(calls.at(-1)).toMatchObject({ method: "POST", path: "/funil", body: { candidatos, janela: "manha" } });
 });
 
 it("says plainly when the token is missing or wrong", async () => {
