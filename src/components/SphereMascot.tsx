@@ -23,6 +23,7 @@ import {
   smilePath,
   trackDurationMs,
   trackFaceAt,
+  turnEye,
   type Face,
   type MascotActivity,
 } from "./sphere-mascot";
@@ -34,6 +35,41 @@ const EASE_SECONDS = 0.06;
 const PRESS_MS = trackDurationMs(PRESS_TRACK);
 /** Grok watches the pointer anywhere on the agent's row; the row marks itself with this attribute. */
 const HOVER_REGION = "[data-mascot-hover]";
+const WIND_LINES = [
+  { offset: -0.45, length: 0.75, phase: 0 },
+  { offset: 0, length: 1, phase: 0.35 },
+  { offset: 0.45, length: 0.6, phase: 0.7 },
+] as const;
+const WIND_CYCLE_MS = 260;
+/** The quill, nib at the origin and y down, in body radii: a feather vane, its shaft and a nib. */
+const QUILL_VANE =
+  "M0 -0.5C-0.32 -0.75 -0.45 -1 -0.47 -1.15L-0.28 -1.2L-0.45 -1.38C-0.42 -1.75 -0.2 -2.05 0.04 -2.2" +
+  "C0.3 -1.95 0.45 -1.65 0.46 -1.45L0.27 -1.5L0.46 -1.3C0.43 -0.95 0.25 -0.7 0 -0.5Z";
+const QUILL_SHAFT = "M0 -0.52L0 -0.2";
+const QUILL_SPINE = "M0 -0.62C0.01 -1.1 0.02 -1.6 0.03 -2.02";
+const QUILL_NIB = "M-0.13 -0.24L0.13 -0.24L0 0.06Z";
+const QUILL_EYES = [[-0.19, -1.62], [0.2, -1.55]] as const;
+const QUILL_LEAN = 28;
+const QUILL_SIZE = 0.78;
+const INK_LEFT = -0.9;
+const INK_WIDTH = 1.8;
+const INK_BASE = 0.8;
+const INK_WAVE = 0.125;
+const INK_STEP = 0.3;
+const INK_STEPS = 60;
+
+/** The written line up to `x`: a wave, one hump every INK_STEP. */
+function inkPath(x: number): string {
+  const points: string[] = [];
+  for (let i = 0; i <= INK_STEPS; i++) {
+    const at = INK_LEFT + ((x - INK_LEFT) * i) / INK_STEPS;
+    points.push(`${at.toFixed(3)} ${(INK_BASE - INK_WAVE * Math.sin((Math.PI * (at - INK_LEFT)) / INK_STEP)).toFixed(3)}`);
+  }
+  return `M${points.join("L")}`;
+}
+const BLINK_GAP_MS: readonly [number, number] = [2500, 6500];
+const STIR_GAP_MS: readonly [number, number] = [9000, 20000];
+const between = ([low, high]: readonly [number, number]) => low + Math.random() * (high - low);
 
 export interface SphereMascotProps {
   activity?: MascotActivity;
@@ -67,6 +103,10 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
   const pills = [useRef<SVGPathElement | null>(null), useRef<SVGPathElement | null>(null)];
   const smiles = [useRef<SVGPathElement | null>(null), useRef<SVGPathElement | null>(null)];
   const sideDots = [useRef<SVGCircleElement | null>(null), useRef<SVGCircleElement | null>(null)];
+  const windGroup = useRef<SVGGElement | null>(null);
+  const windLines = [useRef<SVGPathElement | null>(null), useRef<SVGPathElement | null>(null), useRef<SVGPathElement | null>(null)];
+  const quillGroup = useRef<SVGGElement | null>(null);
+  const inkLine = useRef<SVGPathElement | null>(null);
   const ticket = useRef<MascotTicket | null>(null);
   const sizePx = typeof size === "number" ? size : 160;
   const centre: [number, number] = [silhouette.anchor.x + CIRCLE_ANCHOR_OFFSET[0], silhouette.anchor.y + CIRCLE_ANCHOR_OFFSET[1]];
@@ -82,6 +122,8 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
     pointer: [0, 0] as [number, number],
     last: 0,
     drawn: "",
+    nextBlink: 0,
+    nextStir: 0,
   });
   engine.current.props = { activity, pinned: face, paused, interactive, sizePx, centre };
   const wake = () => ticket.current?.wake();
@@ -154,6 +196,19 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       const p = e.props;
       const dt = Math.min(Math.max(now - (e.last || now), 0), 50) / 1000;
       e.last = now;
+      const alive = !p.pinned && !p.paused;
+      if (alive) {
+        if (!e.nextBlink) e.nextBlink = now + between(BLINK_GAP_MS);
+        if (!e.nextStir) e.nextStir = now + between(STIR_GAP_MS);
+        if (now >= e.nextBlink) {
+          if (e.blinkStart === null && e.face.quill < 0.01 && e.face.dots < 0.01) e.blinkStart = now;
+          e.nextBlink = now + between(BLINK_GAP_MS);
+        }
+        if (now >= e.nextStir) {
+          if (p.activity === "idle" && !e.hover) e.director?.stir(now, e.face);
+          e.nextStir = now + between(STIR_GAP_MS);
+        }
+      }
       const target = targetFace(now);
       e.face = p.pinned ? target.face : mixFace(e.face, target.face, 1 - Math.exp(-dt / EASE_SECONDS));
       const settled = faceDistance(e.face, target.face) < 0.002;
@@ -169,16 +224,17 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       const [cx, cy] = p.centre;
       const middle = dotPose(f.beat[1]);
       const shrink = 1 + (middle.radius - 1) * f.dots;
-      const sx = f.scale * f.stretchX * shrink;
-      const sy = f.scale * f.stretchY * shrink;
+      const quilled = Math.max(0, Math.min(1, f.quill));
+      const sx = f.scale * f.stretchX * shrink * (1 - 0.72 * quilled);
+      const sy = f.scale * f.stretchY * shrink * (1 + 0.12 * quilled);
       const ox = f.x * BODY_RADIUS;
       const oy = -(f.y + middle.lift * f.dots) * BODY_RADIUS;
       const bodyTransform =
         Math.abs(sx - 1) < 1e-4 && Math.abs(sy - 1) < 1e-4 && Math.abs(ox) < 0.01 && Math.abs(oy) < 0.01
           ? ""
           : `translate(${(cx + ox).toFixed(2)} ${(cy + oy).toFixed(2)}) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(${(-cx).toFixed(2)} ${(-cy).toFixed(2)})`;
-      const bodyOpacity = 1 + (middle.opacity - 1) * f.dots;
-      const eyesShown = Math.max(0, 1 - f.dots * 2.5);
+      const bodyOpacity = (1 + (middle.opacity - 1) * f.dots) * Math.max(0, 1 - 1.6 * quilled);
+      const eyesShown = Math.max(0, 1 - f.dots * 2.5) * Math.max(0, 1 - 2 * quilled);
       const sidesShown = Math.max(0, Math.min(1, (f.dots - 0.55) / 0.3));
       const sides = [f.beat[0], f.beat[2]].map((lit, i) => {
         const pose = dotPose(lit);
@@ -190,21 +246,48 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
         };
       });
       const placed = f.eyes.map((eye) => {
-        const at = `translate(${(cx + eye.x * BODY_RADIUS).toFixed(2)} ${(cy - eye.y * BODY_RADIUS).toFixed(2)})`;
+        const turned = turnEye(eye, f.roll, f.yaw);
+        const at = `translate(${(cx + turned.x * BODY_RADIUS).toFixed(2)} ${(cy - turned.y * BODY_RADIUS).toFixed(2)})`;
+        const squash = `scale(${turned.squashX.toFixed(3)} ${(turned.squashY * open).toFixed(3)})`;
         return {
-          pill: `${at} scale(1 ${open.toFixed(3)}) rotate(${eye.angle.toFixed(1)}) scale(${BODY_RADIUS.toFixed(3)})`,
-          smile: `${at} rotate(${((((eye.angle + 90) % 180) + 180) % 180 - 90).toFixed(1)}) scale(${BODY_RADIUS.toFixed(3)})`,
+          pill: `${at} ${squash} rotate(${eye.angle.toFixed(1)}) scale(${BODY_RADIUS.toFixed(3)})`,
+          smile: `${at} ${squash} rotate(${((((eye.angle + 90) % 180) + 180) % 180 - 90).toFixed(1)}) scale(${BODY_RADIUS.toFixed(3)})`,
           d: pillPath(eye.length, eye.width),
-          opacity: eyeOpacity(eye) * eyesShown,
+          opacity: eyeOpacity(eye) * eyesShown * turned.shown,
         };
       });
-      const drawn = `${bodyTransform}|${bodyOpacity.toFixed(3)}|${sides.map((s) => `${s.cy.toFixed(2)},${s.r.toFixed(2)},${s.opacity.toFixed(2)}`).join("|")}|${placed.map((q) => q.pill + q.d + q.opacity.toFixed(2)).join("|")}|${f.smile.toFixed(3)}`;
+      const gust = Math.min(1, Math.abs(f.wind));
+      const rising = f.wind > 0;
+      const drift = gust > 0.01 ? (now % WIND_CYCLE_MS) / WIND_CYCLE_MS : 0;
+      const winds = WIND_LINES.map((line) => {
+        const along = 1.15 + 0.35 * ((drift + line.phase) % 1);
+        const length = (0.35 + 0.45 * gust) * line.length;
+        const [ax, ay, bx, by] = rising
+          ? [line.offset, along, line.offset, along + length]
+          : [-along, line.offset, -along - length, line.offset];
+        return `M${(cx + ax * BODY_RADIUS).toFixed(2)} ${(cy + ay * BODY_RADIUS).toFixed(2)}L${(cx + bx * BODY_RADIUS).toFixed(2)} ${(cy + by * BODY_RADIUS).toFixed(2)}`;
+      });
+      const inkX = INK_LEFT + INK_WIDTH * f.ink;
+      const inkY = INK_BASE - INK_WAVE * Math.sin((Math.PI * (inkX - INK_LEFT)) / INK_STEP);
+      const quillShown = Math.max(0, Math.min(1, (quilled - 0.2) / 0.5));
+      const quillTransform = `translate(${cx.toFixed(2)} ${cy.toFixed(2)}) scale(${BODY_RADIUS.toFixed(3)}) translate(${inkX.toFixed(3)} ${inkY.toFixed(3)}) rotate(${QUILL_LEAN}) scale(${(QUILL_SIZE * (0.7 + 0.3 * quillShown)).toFixed(3)})`;
+      const drawn = `${bodyTransform}|${bodyOpacity.toFixed(3)}|${gust.toFixed(3)}|${winds.join("")}|${quillShown.toFixed(3)}|${quillTransform}|${f.ink.toFixed(3)}|${sides.map((s) => `${s.cy.toFixed(2)},${s.r.toFixed(2)},${s.opacity.toFixed(2)}`).join("|")}|${placed.map((q) => q.pill + q.d + q.opacity.toFixed(2)).join("|")}|${f.smile.toFixed(3)}`;
       if (drawn !== e.drawn) {
         e.drawn = drawn;
         if (bodyGroup.current) {
           if (bodyTransform) bodyGroup.current.setAttribute("transform", bodyTransform);
           else bodyGroup.current.removeAttribute("transform");
           bodyGroup.current.style.opacity = bodyOpacity < 1 ? bodyOpacity.toFixed(3) : "";
+        }
+        if (windGroup.current) windGroup.current.style.opacity = gust > 0.01 ? (0.55 * gust).toFixed(3) : "0";
+        winds.forEach((d, i) => windLines[i].current?.setAttribute("d", d));
+        if (quillGroup.current) {
+          quillGroup.current.setAttribute("transform", quillTransform);
+          quillGroup.current.style.opacity = quillShown > 0 ? quillShown.toFixed(3) : "0";
+        }
+        if (inkLine.current) {
+          inkLine.current.setAttribute("d", f.ink > 0.005 ? inkPath(inkX) : "");
+          inkLine.current.style.opacity = quillShown > 0 ? quillShown.toFixed(3) : "0";
         }
         sides.forEach((s, i) => {
           const dot = sideDots[i].current;
@@ -230,7 +313,8 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       }
 
       const step = p.sizePx <= 24 ? 1000 / 30 : FULL_FRAME_MS;
-      return target.moving || !settled || e.blinkStart !== null ? now + step : Infinity;
+      if (target.moving || !settled || e.blinkStart !== null) return now + step;
+      return alive ? Math.min(e.nextBlink, e.nextStir) : Infinity;
     };
 
     engine.current.last = 0;
@@ -329,6 +413,28 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       {[0, 1].map((i) => (
         <circle key={i} ref={sideDots[i]} r={0} fill={fill} style={{ opacity: 0 }} />
       ))}
+      <g ref={windGroup} style={{ opacity: 0 }} stroke={fill} strokeWidth={0.13 * BODY_RADIUS} strokeLinecap="round" fill="none">
+        {windLines.map((line, i) => <path key={i} ref={line} />)}
+      </g>
+      <path
+        ref={inkLine}
+        transform={`translate(${centre[0]} ${centre[1]}) scale(${BODY_RADIUS})`}
+        fill="none"
+        stroke={fill}
+        strokeWidth={0.09}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ opacity: 0 }}
+      />
+      <g ref={quillGroup} style={{ opacity: 0 }}>
+        <path d={QUILL_VANE} fill={fill} />
+        <path d={QUILL_SHAFT} stroke={fill} strokeWidth={0.13} strokeLinecap="round" />
+        <path d={QUILL_SPINE} stroke={eyeColor} strokeOpacity={0.35} strokeWidth={0.05} strokeLinecap="round" fill="none" />
+        <path d={QUILL_NIB} fill={fill} />
+        {QUILL_EYES.map(([x, y], i) => (
+          <path key={i} d={pillPath(0.36, 0.17)} fill={eyeColor} transform={`translate(${x} ${y}) rotate(${90 - QUILL_LEAN})`} />
+        ))}
+      </g>
     </svg>
   );
 });

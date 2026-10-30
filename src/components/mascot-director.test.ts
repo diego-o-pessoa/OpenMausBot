@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MASCOT_CLIPS } from "./mascot-clips";
-import { FINALE_MS, MascotDirector, REPERTOIRE, leaseDirector } from "./mascot-director";
+import { FINALE_MS, IDLE_GESTURES, MascotDirector, QUILL_MS, REPERTOIRE, SPIN_MS, leaseDirector, stagedFace } from "./mascot-director";
 import { IDLE_FACE, trackDurationMs, trackFaceAt } from "./sphere-mascot";
 
 const sequence = (values: number[]) => {
@@ -107,5 +107,48 @@ describe("the low scans", () => {
     const drawn = director.frame(1000)!;
     const measured = trackFaceAt(MASCOT_CLIPS.downScanA, 1000);
     expect(drawn.eyes[0].length).toBeCloseTo(measured.eyes[0].length * 0.85, 3);
+  });
+});
+
+describe("the new gestures", () => {
+  it("turns into a quill as soon as it starts writing, writes its line, then is itself again", () => {
+    const director = new MascotDirector(sequence([0.5]));
+    director.setActivity("writing", 0, IDLE_FACE);
+    expect(director.current).toBe("quill");
+    const writing = director.frame(QUILL_MS / 2)!;
+    expect(writing.quill).toBe(1);
+    expect(writing.ink).toBeGreaterThan(0.3);
+    expect(writing.ink).toBeLessThan(0.7);
+    expect(stagedFace("quill", QUILL_MS).quill).toBe(0);
+    expect(stagedFace("quill", QUILL_MS).ink).toBe(1);
+  });
+
+  it("spins a whole turn, fastest in the middle, with the wind behind it, and ends facing front", () => {
+    const up = [0, SPIN_MS / 4, SPIN_MS / 2, (3 * SPIN_MS) / 4].map((t) => stagedFace("spinUp", t));
+    expect(up.map((face) => face.roll)).toEqual(up.map((face) => face.roll).sort((a, b) => a - b));
+    expect(up[2].roll).toBeCloseTo(0.5, 5);
+    expect(up[2].wind).toBeCloseTo(1, 5);
+    expect(up.every((face) => face.yaw === 0)).toBe(true);
+    const right = stagedFace("spinRight", SPIN_MS / 2);
+    expect(right).toMatchObject({ roll: 0, wind: -1 });
+    expect(right.yaw).toBeCloseTo(0.5, 5);
+    for (const gesture of ["spinUp", "spinRight"] as const) expect(stagedFace(gesture, SPIN_MS)).toMatchObject({ roll: 0, yaw: 0, wind: 0 });
+  });
+
+  it("names a spin by its direction while it plays", () => {
+    const director = new MascotDirector(sequence([0.99]));
+    director.setActivity("looking", 0, IDLE_FACE);
+    expect(director.current).toBe("spinRight");
+  });
+
+  it("stirs now and then while resting, but never over work", () => {
+    const resting = new MascotDirector(sequence([0]));
+    resting.stir(0, IDLE_FACE);
+    expect(IDLE_GESTURES).toContain(resting.current);
+    const working = new MascotDirector(sequence([0]));
+    working.setActivity("reading", 0, IDLE_FACE);
+    const before = working.current;
+    working.stir(10, IDLE_FACE);
+    expect(working.current).toBe(before);
   });
 });

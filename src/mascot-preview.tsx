@@ -4,6 +4,7 @@ import { BotAvatar } from "@/components/Avatar";
 import { SphereMascot, type SphereMascotHandle } from "@/components/SphereMascot";
 import { ThinkingDots, PresenceMascot } from "@/components/ThinkingDots";
 import { MASCOT_CLIPS, type MascotClipName } from "@/components/mascot-clips";
+import { QUILL_MS, SPIN_MS, stagedFace } from "@/components/mascot-director";
 import { TRACK_STEP_MS } from "@/components/mascot-tracks";
 import { DOTS_FACE, FRONT_FACE, IDLE_FACE, STILL_WORKING_FACE, dotBeat, faceFromSample, lookToward, type Face, type MascotActivity } from "@/components/sphere-mascot";
 import { GROK_BODY_IDS, MAUS_COLOR_NAMES, MAUS_COLORS, type MausColor } from "@/lib/mascot";
@@ -152,7 +153,24 @@ function Gallery() {
   );
 }
 
+/** `?strip=spinUp|spinRight|quill`: the gesture's frames side by side. */
+function Strip() {
+  const gesture = (new URLSearchParams(location.search).get("strip") ?? "spinUp") as "spinUp" | "spinRight" | "quill";
+  const ms = gesture === "quill" ? QUILL_MS : SPIN_MS;
+  const frames = Array.from({ length: 12 }, (_, i) => (i * ms) / 11);
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", background: "#f0f0f0", width: 6 * 150 }}>
+      {frames.map((t) => (
+        <div key={t} style={{ width: 150, height: 168, padding: 4 }}>
+          <div style={{ font: "11px monospace", color: "#000" }}>{Math.round(t)} ms</div>
+          <SphereMascot face={stagedFace(gesture, t)} size={110} fill="#111111" silhouette={MASCOT_BODIES.circle} interactive={false} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const params = new URLSearchParams(location.search);
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>{params.has("faces") ? <FaceSheet /> : params.has("solo") ? <Solo /> : <Gallery />}</StrictMode>,
+  <StrictMode>{params.has("strip") ? <Strip /> : params.has("faces") ? <FaceSheet /> : params.has("solo") ? <Solo /> : <Gallery />}</StrictMode>,
 );

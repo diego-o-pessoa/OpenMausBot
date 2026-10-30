@@ -51,6 +51,16 @@ export interface Face {
   dots: number;
   /** How lit each dot is, left to right. */
   beat: readonly [number, number, number];
+  /** How far the sphere has rolled over its top, in turns: the face slides up, round the back and in from below. */
+  roll: number;
+  /** How far the sphere has turned to its right, in turns: the face slides right, round the back and in from the left. */
+  yaw: number;
+  /** How strongly speed lines trail the body: above 0 below it as it rolls up, below 0 behind it as it turns right. */
+  wind: number;
+  /** How far the body has become a quill, 0 to 1. */
+  quill: number;
+  /** How much of its line the quill has written, 0 to 1. */
+  ink: number;
 }
 
 const eye = (x: number, y: number, length: number, width: number, angle: number): Eye => ({ x, y, length, width, angle });
@@ -65,6 +75,11 @@ const still = (left: Eye, right: Eye): Face => ({
   smile: 0,
   dots: 0,
   beat: [0, 0, 0],
+  roll: 0,
+  yaw: 0,
+  wind: 0,
+  quill: 0,
+  ink: 0,
 });
 
 export const IDLE_FACE: Face = still(eye(0.108, 0.325, 0.576, 0.283, 55), eye(0.571, 0.532, 0.567, 0.185, 52));
@@ -90,6 +105,11 @@ export function faceFromSample(sample: TrackSample): Face {
     smile: sample[13],
     dots: 0,
     beat: [0, 0, 0],
+    roll: 0,
+    yaw: 0,
+    wind: 0,
+    quill: 0,
+    ink: 0,
   };
 }
 
@@ -115,6 +135,11 @@ function mixEye(a: Eye, b: Eye, t: number): Eye {
   };
 }
 
+/** A turn and the same turn plus a whole one look alike, so blends go the short way round. */
+function turnStep(a: number, b: number): number {
+  return ((((b - a) % 1) + 1.5) % 1) - 0.5;
+}
+
 export function mixFace(a: Face, b: Face, t: number): Face {
   const k = Math.max(0, Math.min(1, t));
   return {
@@ -127,6 +152,11 @@ export function mixFace(a: Face, b: Face, t: number): Face {
     smile: mix(a.smile, b.smile, k),
     dots: mix(a.dots, b.dots, k),
     beat: [mix(a.beat[0], b.beat[0], k), mix(a.beat[1], b.beat[1], k), mix(a.beat[2], b.beat[2], k)],
+    roll: a.roll + turnStep(a.roll, b.roll) * k,
+    yaw: a.yaw + turnStep(a.yaw, b.yaw) * k,
+    wind: mix(a.wind, b.wind, k),
+    quill: mix(a.quill, b.quill, k),
+    ink: mix(a.ink, b.ink, k),
   };
 }
 
@@ -139,6 +169,11 @@ export function faceDistance(a: Face, b: Face): number {
     Math.abs(a.y - b.y),
     Math.abs(a.smile - b.smile),
     Math.abs(a.dots - b.dots),
+    Math.abs(turnStep(a.roll, b.roll)),
+    Math.abs(turnStep(a.yaw, b.yaw)),
+    Math.abs(a.wind - b.wind),
+    Math.abs(a.quill - b.quill),
+    Math.abs(a.ink - b.ink),
     ...a.beat.map((v, i) => Math.abs(v - b.beat[i])),
   );
   for (const i of [0, 1]) {
@@ -263,4 +298,37 @@ const SMILE_LIFT = 0.025;
 export function smilePath(): string {
   const lift = (2 * SMILE_RADIUS) / Math.PI - SMILE_LIFT;
   return `M${fmt(-SMILE_RADIUS)} ${fmt(lift)}A${fmt(SMILE_RADIUS)} ${fmt(SMILE_RADIUS)} 0 0 1 ${fmt(SMILE_RADIUS)} ${fmt(lift)}`;
+}
+
+/** Where an eye drawn at `eye.x`, `eye.y` on the front of the sphere shows once it has rolled and turned. */
+export interface TurnedEye {
+  x: number;
+  y: number;
+  /** How much of its width and height still faces the viewer as it rounds the sphere. */
+  squashX: number;
+  squashY: number;
+  /** 0 once it has gone round the back. */
+  shown: number;
+}
+
+const SURFACE = 0.96;
+
+export function turnEye(eye: Eye, roll: number, yaw: number): TurnedEye {
+  const r = Math.hypot(eye.x, eye.y);
+  const k = r > SURFACE ? SURFACE / r : 1;
+  let x = eye.x * k;
+  let y = eye.y * k;
+  let z = Math.sqrt(Math.max(0, 1 - x * x - y * y));
+  const up = roll * 2 * Math.PI;
+  [y, z] = [y * Math.cos(up) + z * Math.sin(up), z * Math.cos(up) - y * Math.sin(up)];
+  const right = yaw * 2 * Math.PI;
+  [x, z] = [x * Math.cos(right) + z * Math.sin(right), z * Math.cos(right) - x * Math.sin(right)];
+  const facing = Math.max(0, z);
+  return {
+    x,
+    y,
+    squashX: yaw === 0 ? 1 : Math.max(0.08, facing),
+    squashY: roll === 0 ? 1 : Math.max(0.08, facing),
+    shown: Math.max(0, Math.min(1, z / 0.18)),
+  };
 }
