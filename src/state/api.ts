@@ -1,6 +1,8 @@
 // The renderer's JSON request helper. A Cloud home that went to sleep is never woken by a background poll
 // (src/lib/cloud-power.ts).
 import { asleepAnswer, BACKGROUND_HEADER, cloudAsleep, markCloudAsleep, markCloudAwake } from "../lib/cloud-power";
+import { PERSON_HEADER, personHeaderValue } from "../lib/person-name";
+import { noteServerDate } from "../lib/server-clock";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -23,6 +25,9 @@ export async function api<T = any>(path: string, init?: RequestInit & { timeoutM
   }
   const sent = new Headers(headers ?? { "content-type": "application/json" });
   if (background) sent.set(BACKGROUND_HEADER, "1");
+  const person = personHeaderValue();
+  if (person) sent.set(PERSON_HEADER, person);
+  const sentAt = Date.now();
   const res = await fetch(path, {
     ...rest,
     headers: sent,
@@ -32,6 +37,7 @@ export async function api<T = any>(path: string, init?: RequestInit & { timeoutM
         ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)])
         : AbortSignal.timeout(timeoutMs),
   });
+  noteServerDate(res.headers?.get("date") ?? null, sentAt, Date.now());
   if (asleepAnswer(res)) markCloudAsleep();
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {

@@ -2,6 +2,7 @@
 // once a second instead of committing through React.
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
+import { serverNow } from "@/lib/server-clock";
 import { formatElapsed } from "@/lib/working-time";
 
 export function WorkingDots({ size = 4, className }: { size?: number; className?: string }) {
@@ -22,7 +23,7 @@ export function WorkingTimer({ since, className }: { since: number; className?: 
   const node = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     const tick = () => {
-      if (node.current) node.current.textContent = formatElapsed(Date.now() - since);
+      if (node.current) node.current.textContent = formatElapsed(serverNow() - since);
     };
     tick();
     const timer = setInterval(tick, 1000);

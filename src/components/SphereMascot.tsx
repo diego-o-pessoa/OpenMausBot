@@ -2,7 +2,7 @@ import React, { useEffect, useId, useMemo, useRef } from "react";
 
 import type { CursorAvatarHandle, CursorSilhouette } from "./CursorAvatar";
 import { FACE_BOX } from "./cursor-face-data";
-import { mascotClock, usePrefersReducedMotion, type MascotTicket } from "./mascot-clock";
+import { mascotClock, type MascotTicket } from "./mascot-clock";
 import { leaseDirector, type MascotDirector } from "./mascot-director";
 import { FULL_FRAME_MS, VIEW_SPAN } from "./mascot-motion";
 import { PRESS_TRACK } from "./mascot-tracks";
@@ -68,12 +68,11 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
   const smiles = [useRef<SVGPathElement | null>(null), useRef<SVGPathElement | null>(null)];
   const sideDots = [useRef<SVGCircleElement | null>(null), useRef<SVGCircleElement | null>(null)];
   const ticket = useRef<MascotTicket | null>(null);
-  const reduced = usePrefersReducedMotion();
   const sizePx = typeof size === "number" ? size : 160;
   const centre: [number, number] = [silhouette.anchor.x + CIRCLE_ANCHOR_OFFSET[0], silhouette.anchor.y + CIRCLE_ANCHOR_OFFSET[1]];
 
   const engine = useRef({
-    props: { activity, pinned: face, paused, reduced, interactive, sizePx, centre },
+    props: { activity, pinned: face, paused, interactive, sizePx, centre },
     face: face ?? (activity === "idle" ? IDLE_FACE : STILL_WORKING_FACE),
     director: null as MascotDirector | null,
     lastActivity: activity,
@@ -84,26 +83,23 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
     last: 0,
     drawn: "",
   });
-  engine.current.props = { activity, pinned: face, paused, reduced, interactive, sizePx, centre };
+  engine.current.props = { activity, pinned: face, paused, interactive, sizePx, centre };
   const wake = () => ticket.current?.wake();
 
   React.useImperativeHandle(
     ref,
     () => ({
       blink: () => {
-        if (engine.current.props.reduced) return;
         engine.current.blinkStart = performance.now();
         wake();
       },
       spin: () => {
-        if (engine.current.props.reduced) return;
         engine.current.pressStart = performance.now();
         wake();
       },
       setExpression: () => {},
       celebrate: () => {
         const e = engine.current;
-        if (e.props.reduced) return;
         e.director?.celebrate(performance.now(), e.face);
         wake();
       },
@@ -125,7 +121,7 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
     const was = e.lastActivity;
     e.lastActivity = activity;
     const showsLiveState = !paused;
-    if (!reduced && e.director) {
+    if (e.director) {
       if (showsLiveState) e.director.setActivity(activity, performance.now(), e.face);
       else if (was !== "idle" && activity === "idle") {
         e.director.setActivity("idle", performance.now(), e.face);
@@ -134,7 +130,7 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
     }
     e.drawn = "";
     wake();
-  }, [activity, syncKey, face, paused, reduced, interactive, sizePx, silhouette]);
+  }, [activity, syncKey, face, paused, interactive, sizePx, silhouette]);
 
   useEffect(() => {
     const targetFace = (now: number): { face: Face; moving: boolean } => {
@@ -146,11 +142,9 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
         e.pressStart = null;
       }
       const working = p.activity !== "idle";
-      if (working && (p.paused || p.reduced)) return { face: STILL_WORKING_FACE, moving: false };
-      if (!p.reduced) {
-        const performed = e.director?.frame(now);
-        if (performed) return { face: performed, moving: true };
-      }
+      if (working && p.paused) return { face: STILL_WORKING_FACE, moving: false };
+      const performed = e.director?.frame(now);
+      if (performed) return { face: performed, moving: true };
       if (e.hover && p.interactive) return { face: lookToward(FRONT_FACE, e.pointer[0], e.pointer[1]), moving: false };
       return { face: IDLE_FACE, moving: false };
     };
@@ -161,7 +155,7 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       const dt = Math.min(Math.max(now - (e.last || now), 0), 50) / 1000;
       e.last = now;
       const target = targetFace(now);
-      e.face = p.reduced || p.pinned ? target.face : mixFace(e.face, target.face, 1 - Math.exp(-dt / EASE_SECONDS));
+      e.face = p.pinned ? target.face : mixFace(e.face, target.face, 1 - Math.exp(-dt / EASE_SECONDS));
       const settled = faceDistance(e.face, target.face) < 0.002;
       if (settled) e.face = target.face;
 
@@ -287,7 +281,6 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
 
   const onPointerDown = interactive
     ? () => {
-        if (engine.current.props.reduced) return;
         engine.current.pressStart = performance.now();
         wake();
       }

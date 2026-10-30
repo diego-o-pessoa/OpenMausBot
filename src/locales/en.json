@@ -1039,6 +1039,8 @@
   "settings.profile.subtitle": "Shown in the sidebar. Saved as you go.",
   "settings.profile.sharedSubtitle": "Your details and shared context. Saved as you go.",
   "settings.profile.name": "Your name",
+  "settings.profile.deviceName": "Your name on this computer",
+  "settings.profile.deviceNameHelp": "Bots call whoever writes from this computer by this name. Each person sets it on their own computer. Empty: the name above.",
   "settings.profile.avatar.choose": "Choose photo",
   "settings.profile.avatar.uploading": "Uploading…",
   "settings.profile.avatar.remove": "Remove photo",

@@ -994,6 +994,8 @@
   "settings.profile.subtitle": "Aparece na barra lateral. Salvo conforme você digita.",
   "settings.profile.sharedSubtitle": "Seus dados e contexto compartilhado. Salvo conforme você digita.",
   "settings.profile.name": "Seu nome",
+  "settings.profile.deviceName": "Seu nome neste computador",
+  "settings.profile.deviceNameHelp": "Os bots chamam quem escreve deste computador por este nome. Cada pessoa coloca o seu no próprio computador. Vazio: usa o nome acima.",
   "settings.profile.avatar.choose": "Escolher foto",
   "settings.profile.avatar.uploading": "Enviando…",
   "settings.profile.avatar.remove": "Remover foto",

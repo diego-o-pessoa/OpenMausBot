@@ -121,6 +121,7 @@ import { latestFailure, latestReply, type TranscriptSnapshot } from "@/lib/trans
 import { pendingApprovals } from "./PendingApproval";
 import { TranscriptAnnouncer } from "./TranscriptAnnouncer";
 import { JumpToLatestButton } from "./JumpToLatestButton";
+import { serverNow } from "@/lib/server-clock";
 
 const USER_COLLAPSE_CHARS = 600;
 const USER_COLLAPSE_LINES = 8;
@@ -1120,7 +1121,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
   }, [messages, bot.busy, bot.name]);
   const [busySince, setBusySince] = useState<number | null>(null);
   useEffect(() => {
-    setBusySince(bot.busy ? bot.turnStartedAt ?? Date.now() : null);
+    setBusySince(bot.busy ? bot.turnStartedAt ?? serverNow() : null);
   }, [bot.busy, bot.id, bot.threadId, bot.turnStartedAt]);
 
   const regenerate = useCallback(() => {
