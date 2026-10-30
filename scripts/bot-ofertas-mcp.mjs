@@ -206,7 +206,7 @@ const TOOLS = [
         limite: { type: "integer", minimum: 1, maximum: 60, description: "Quantos escolhidos devolver (padrão 15)." },
         candidatos: {
           type: "array", minItems: 1, maxItems: 300,
-          description: "Os produtos, com o que a lista mostra: titulo, categoria (tecnologia, games, eletrodomesticos, tenis, moda_masculina, moda_feminina, academia, casa, cozinha, beleza), preco_por, preco_de, vendidos (ex.: \"+1.000\"), nota, item_id (ex.: MLB123) e link.",
+          description: "Os produtos, com o que a lista mostra: titulo, categoria (tecnologia, games, eletrodomesticos, tenis, moda_masculina, moda_feminina, academia, casa, cozinha, beleza, alimentos), preco_por, preco_de, vendidos (ex.: \"+1.000\"), nota, item_id (ex.: MLB123) e link.",
           items: { type: "object" },
         },
       },
