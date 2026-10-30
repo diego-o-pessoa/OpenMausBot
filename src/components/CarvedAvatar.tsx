@@ -11,7 +11,6 @@ import {
 import { MAUS_COLORS, type MausColor, type MausMotion, type MausState } from "@/lib/mascot";
 import { HALLOWEEN_BODIES, type HalloweenBody, type HalloweenBodyId } from "../../shared/halloween-bodies";
 import type { CursorAvatarHandle } from "./CursorAvatar";
-import { usePrefersReducedMotion } from "./mascot-clock";
 
 /** Where the face looks and how it feels. */
 export type CarvedPose = {
@@ -159,8 +158,7 @@ function CarvedAvatarComponent(
 ) {
   const body = HALLOWEEN_BODIES[bodyId];
   const uid = useId().replace(/:/g, "");
-  const reduced = usePrefersReducedMotion();
-  const live = animated && !reduced;
+  const live = animated;
   const group = useRef<SVGGElement>(null);
   const eyes = [useRef<SVGRectElement>(null), useRef<SVGRectElement>(null)] as const;
   const smile = useRef<SVGPathElement>(null);

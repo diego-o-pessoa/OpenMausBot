@@ -12,7 +12,12 @@ import { denyReason as companionDenial, isCompanionNotice } from "../companion/s
 export type LoopbackTrust = "owner" | "service";
 
 export type RequestAuth =
-  | { kind: "loopback"; scopes: readonly Scope[]; trust?: "service" }
+  | {
+    kind: "loopback"; scopes: readonly Scope[]; trust?: "service";
+    /** Who is at this desktop, as the person named it on that computer. Several people can reach one server
+     * as its owner (each desktop through its own SSH tunnel): this only names them, it grants nothing. */
+    person?: string;
+  }
   | { kind: "session"; session: SessionRecord; via: "bearer" | "cookie" | "ticket"; scopes: readonly Scope[] };
 
 export interface RequestAuthResult {
@@ -155,6 +160,24 @@ export function isAllowedOrigin(origin: string | undefined | null): boolean {
 
 function headerValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+export const PERSON_HEADER = "x-openmausbot-person";
+const PERSON_MAX = 60;
+
+/** The name a desktop sends in PERSON_HEADER, percent-encoded so accents survive an HTTP header. */
+export function personFromHeader(req: IncomingMessage): string | undefined {
+  const raw = headerValue(req.headers[PERSON_HEADER]);
+  if (!raw) return undefined;
+  let name: string;
+  try { name = decodeURIComponent(raw); } catch { return undefined; }
+  name = name.replace(/[\p{Cc}\p{Cf}]/gu, "").replace(/\s+/g, " ").trim().slice(0, PERSON_MAX).trim();
+  return name || undefined;
+}
+
+function ownerAuth(req: IncomingMessage): RequestAuth {
+  const person = personFromHeader(req);
+  return { kind: "loopback", scopes: LOOPBACK_SCOPES, ...(person ? { person } : {}) };
 }
 
 export function requestOrigin(req: IncomingMessage): string | null {
@@ -490,7 +513,7 @@ export function resolveRequestAuth(req: IncomingMessage, options: ResolveOptions
         !/^[\w-]{1,128}$/.test(headerValue(req.headers["x-openmausbot-companion-device"]) ?? "") ||
         (companionDenial({ path, method, authenticated: true }) && !isCompanionNotice(method, path))
       ) return deny(403, "forbidden: invalid companion request");
-      return { auth: { kind: "loopback", scopes: LOOPBACK_SCOPES }, status: 401, error: "" };
+      return { auth: ownerAuth(req), status: 401, error: "" };
     }
     const desktopOwner = options.loopbackMutationToken !== undefined &&
       secureTokenMatch(headerValue(req.headers[DESKTOP_OWNER_HEADER]), options.loopbackMutationToken);
@@ -503,7 +526,7 @@ export function resolveRequestAuth(req: IncomingMessage, options: ResolveOptions
         options.cliOwnerToken && CLI_OWNER_ROUTE.test(path) && ["GET", "POST"].includes(method.toUpperCase()) &&
         secureTokenMatch(headerValue(req.headers[CLI_OWNER_HEADER]), options.cliOwnerToken)
       ) {
-        return { auth: { kind: "loopback", scopes: LOOPBACK_SCOPES }, status: 401, error: "" };
+        return { auth: ownerAuth(req), status: 401, error: "" };
       }
       // On a shared server "local" includes every bot's shell: default deny outside SERVICE_ALLOW.
       if (!serviceAllowed(method, path)) {
@@ -511,7 +534,7 @@ export function resolveRequestAuth(req: IncomingMessage, options: ResolveOptions
       }
       return { auth: { kind: "loopback", scopes: SERVICE_SCOPES, trust: "service" }, status: 401, error: "" };
     }
-    return { auth: { kind: "loopback", scopes: LOOPBACK_SCOPES }, status: 401, error: "" };
+    return { auth: ownerAuth(req), status: 401, error: "" };
   }
 
   if (proxied) {

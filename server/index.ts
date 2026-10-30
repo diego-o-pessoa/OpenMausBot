@@ -815,8 +815,15 @@ registerEnginesBinDir();
 
 // Set only when a turn is admitted, never on queue or steer, so a second person's words cannot re-book the first person's turn.
 const turnTriggers = new Map<string, UsageTrigger>();
+/** In a direct chat the bot otherwise assumes the profile's owner wrote, but several people can use one server. */
+function speakerNote(sender: ResolvedSender | undefined, profileName: string | undefined): string {
+  const name = sender?.name.trim();
+  if (!name || name.toLocaleLowerCase() === profileName?.trim().toLocaleLowerCase()) return "";
+  return `(This message is from ${name}, not ${profileName?.trim() || "the workspace owner"}. Address ${name} by name.)\n\n`;
+}
+
 function messageSender(auth: RequestAuth): ResolvedSender | undefined {
-  if (auth.kind !== "session") return undefined;
+  if (auth.kind !== "session") return auth.person ? { name: auth.person } : undefined;
   const name = (auth.session.email ?? auth.session.label ?? "").trim();
   return name ? { name, id: actorKey(auth) } : undefined;
 }
@@ -8425,7 +8432,7 @@ async function startTurn(
         ? skillsHost.expandSkillCommand(bot, providerText, instance)
         : providerText;
       const setupText = agentsMounted ? expandSetupTurnText(skillCommandText) : skillCommandText;
-      const userTurnText = (opts?.app?.context ?? "") + withReactionNotes(promptWithReply(
+      const userTurnText = (opts?.app?.context ?? "") + speakerNote(personLine ? opts?.sender : undefined, cfg.profile?.name) + withReactionNotes(promptWithReply(
         skillAuthoring ? expandLearnTurnText(setupText, (ref) => taughtDemo(DATA_DIR, bot.id, ref), (id) => listStagedSkillWrites(bot.id).find((entry) => entry.id === id) ?? null) : setupText,
         opts?.replyTo,
         cfg.profile?.name?.trim() || "User",

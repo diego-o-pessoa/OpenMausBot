@@ -4,6 +4,7 @@ import { t } from "@/lib/i18n";
 import { IMAGE_MAX_BYTES, imageAttachmentFromFile, isImageFile } from "@/lib/composer-attachments";
 import type { LocaleKey } from "@/locales";
 import { botAvatarUrlFromStoredPath } from "../../shared/bot-avatar";
+import { devicePersonName, setDevicePersonName } from "@/lib/person-name";
 import { AboutMeSettings } from "./AboutMeSettings";
 
 const PHOTO_MIN_SIDE = 64;
@@ -143,6 +144,25 @@ function ProfilePhoto() {
   );
 }
 
+function DevicePersonName({ className }: { className: string }) {
+  const [value, setValue] = useState(devicePersonName);
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[12.5px] text-ink-secondary">{t("settings.profile.deviceName")}</span>
+      <input
+        aria-label={t("settings.profile.deviceName")}
+        value={value}
+        maxLength={60}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => { setDevicePersonName(value); setValue(devicePersonName()); }}
+        placeholder={t("settings.profile.deviceName")}
+        className={className}
+      />
+      <span className="text-[11.5px] text-ink-tertiary">{t("settings.profile.deviceNameHelp")}</span>
+    </label>
+  );
+}
+
 export function ProfileFields() {
   const { state, dispatch } = useStore();
   const [name, setName] = useState(state.config?.profile?.name ?? "");
@@ -171,6 +191,7 @@ export function ProfileFields() {
     <div className="flex flex-col gap-3">
       <ProfilePhoto />
       <input aria-label={t("settings.profile.name")} value={name} onChange={(e) => setName(e.target.value)} onBlur={save} placeholder={t("settings.profile.name")} className={inputClass} />
+      <DevicePersonName className={inputClass} />
       <input
         type="email"
         aria-label={t("phone.signIn.email")}

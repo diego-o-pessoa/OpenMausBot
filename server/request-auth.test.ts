@@ -17,6 +17,7 @@ import {
   isSameOrigin,
   provesSameOrigin,
   parseCookies,
+  personFromHeader,
   requestOrigin,
   requestSource,
   requiredScope,
@@ -229,6 +230,20 @@ describe("resolveRequestAuth", () => {
     if (!result.ok) throw new Error(result.error);
     return result.token;
   }
+
+  it("names the person at a desktop without granting anything more", () => {
+    const named = resolve({ host: "127.0.0.1:8799", "x-openmausbot-person": encodeURIComponent("Kayky Felipe") });
+    expect(named.auth).toEqual({ kind: "loopback", scopes: ["admin", "client"], person: "Kayky Felipe" });
+    expect(resolve({ host: "100.64.0.9:8799", "x-openmausbot-person": "Kayky" }).auth).toBeNull();
+  });
+
+  it("reads the person's name with accents, and drops control characters and junk", () => {
+    expect(personFromHeader(request({ "x-openmausbot-person": encodeURIComponent("  João\u0007  Pessoa ") }))).toBe("João Pessoa");
+    expect(personFromHeader(request({ "x-openmausbot-person": "%E0%A4%A" }))).toBeUndefined();
+    expect(personFromHeader(request({ "x-openmausbot-person": "%20" }))).toBeUndefined();
+    expect(personFromHeader(request({ "x-openmausbot-person": "x".repeat(200) }))).toHaveLength(60);
+    expect(personFromHeader(request({}))).toBeUndefined();
+  });
 
   it("keeps the loopback owner path exactly as before", () => {
     expect(resolve({ host: "127.0.0.1:8799" }).auth).toEqual({ kind: "loopback", scopes: ["admin", "client"] });

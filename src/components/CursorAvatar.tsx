@@ -15,7 +15,7 @@ import {
   type Ring,
 } from "./cursor-face-data"
 import { GLYPH_EASE_MS, MOTION, VIEW_SPAN, bodyTransform, faceTravelUnits, morphUnitsPerMs, nextMascotFrame, type BodyMotion } from "./mascot-motion"
-import { mascotClock, usePrefersReducedMotion, type MascotTicket } from "./mascot-clock"
+import { mascotClock, type MascotTicket } from "./mascot-clock"
 
 export { MOTION, bodyTransform }
 export type { BodyMotion }
@@ -958,8 +958,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
     const ticket = useRef<MascotTicket | null>(null)
     const wake = () => ticket.current?.wake()
 
-    const reduced = usePrefersReducedMotion()
-    const motionStrength = motion ?? (reduced ? 0 : 1)
+    const motionStrength = motion ?? 1
     const paint = `url(#${uid}-grad)`
     const props = {
       state,
@@ -969,7 +968,6 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
       spring,
       eyeScale,
       paused,
-      reduced,
       lookAround,
       motionStrength,
       effects,
@@ -1026,12 +1024,10 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
       ref,
       () => ({
         blink: () => {
-          if (engine.current.props.reduced) return
           engine.current.blinkStart = performance.now()
           wake()
         },
         spin: (durationMs = 900) => {
-          if (engine.current.props.reduced) return
           engine.current.spinDuration = durationMs
           engine.current.spinStart = performance.now()
           wake()
@@ -1046,7 +1042,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
     }, [state, expression])
 
     useEffect(() => {
-      if (!autoExpression || expression !== undefined || paused || reduced) return
+      if (!autoExpression || expression !== undefined || paused) return
       let timer: ReturnType<typeof setTimeout>
       const tick = () => {
         const [lo, hi] = EXPR_CADENCE[state]
@@ -1063,11 +1059,11 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
       }
       tick()
       return () => clearTimeout(timer)
-    }, [state, autoExpression, expression, paused, reduced])
+    }, [state, autoExpression, expression, paused])
 
     useEffect(() => {
       const cadence = BLINK[state]
-      if (!autoBlink || !cadence || paused || reduced) return
+      if (!autoBlink || !cadence || paused) return
       let timer: ReturnType<typeof setTimeout>
       const tick = () => {
         timer = setTimeout(() => {
@@ -1078,12 +1074,12 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
       }
       tick()
       return () => clearTimeout(timer)
-    }, [state, autoBlink, paused, reduced])
+    }, [state, autoBlink, paused])
 
     useEffect(() => {
       engine.current.faceStale = true
       wake()
-    }, [state, expression, gaze?.x, gaze?.y, turn, eyeScale, lookAround, paused, reduced, motionStrength, effects, glyphs, paint, showMouth, size])
+    }, [state, expression, gaze?.x, gaze?.y, turn, eyeScale, lookAround, paused, motionStrength, effects, glyphs, paint, showMouth, size])
 
     useEffect(() => {
       const drawFace = (e: typeof engine.current, now: number, spinTurn: number) => {
@@ -1184,7 +1180,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
         const dt = Math.min(Math.max(now - e.last, 0) / 1000, 0.05)
         const f = p.spring ?? 7
         e.last = now
-        if (p.paused || p.reduced) {
+        if (p.paused) {
           e.morph = 1
           e.velocity = 0
           e.blinkStart = null
@@ -1211,7 +1207,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
         e.faceStale = false
         e.faceMoving = faceMoving()
         const showEffects = p.effects !== false && !p.paused
-        const showGlyphs = p.glyphs !== false && !p.paused && !p.reduced
+        const showGlyphs = p.glyphs !== false && !p.paused
         drawBody(e, now, showEffects, showGlyphs)
         if (p.paused) return Infinity
         return nextMascotFrame(now, {

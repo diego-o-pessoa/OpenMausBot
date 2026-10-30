@@ -1,5 +1,3 @@
-import { useSyncExternalStore } from "react";
-
 import { FRAME_SLACK_MS, FULL_FRAME_MS } from "./mascot-motion";
 
 export type MascotFrame = (now: number) => number;
@@ -154,18 +152,4 @@ let shared: MascotClock | undefined;
 export function mascotClock(): MascotClock {
   shared ??= createMascotClock(browserEnvironment());
   return shared;
-}
-
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
-
-function subscribeReducedMotion(onChange: () => void): () => void {
-  const query = globalThis.window?.matchMedia?.(REDUCED_MOTION);
-  query?.addEventListener("change", onChange);
-  return () => query?.removeEventListener("change", onChange);
-}
-
-const readReducedMotion = () => globalThis.window?.matchMedia?.(REDUCED_MOTION).matches ?? false;
-
-export function usePrefersReducedMotion(): boolean {
-  return useSyncExternalStore(subscribeReducedMotion, readReducedMotion, () => false);
 }

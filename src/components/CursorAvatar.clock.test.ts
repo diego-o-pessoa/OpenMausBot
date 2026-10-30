@@ -159,27 +159,18 @@ describe("the mascot on the shared clock", () => {
     expect(frameRequests).toBeGreaterThan(10);
   });
 
-  it("holds still under reduced motion: no body motion, blinks or spins", () => {
+  it("keeps moving when the computer asks for reduced motion", () => {
     reducedMotion = true;
     const ref = createRef<MausAvatarHandle>();
-    render([{ state: "celebrate", size: 220, ref }]);
-    run(200);
-    const svg = host.querySelector("svg")!;
-    expect(svg.querySelector("g > g:nth-child(2)")!.getAttribute("transform")).toBeNull();
-    frameRequests = 0;
-    act(() => { ref.current!.blink(); ref.current!.spin(); });
-    run(2000);
-    expect(frameRequests).toBe(0);
-    expect(mascotClock().pending()).toBe(0);
-  });
-
-  it("calms an animating mascot when reduced motion is switched on", () => {
-    render([{ state: "working", size: 36 }]);
+    render([{ state: "working", size: 220, ref }]);
     run(200);
     expect(mascotClock().pending()).toBe(1);
-    reducedMotion = true;
-    act(() => { for (const listener of motionListeners) listener(); });
-    run(200);
-    expect(mascotClock().pending()).toBe(0);
+    const eye = () => host.querySelector("g[clip-path] path")!.getAttribute("transform");
+    const open = eye();
+    frameRequests = 0;
+    act(() => { ref.current!.blink(); });
+    run(80);
+    expect(frameRequests).toBeGreaterThan(0);
+    expect(eye()).not.toBe(open);
   });
 });
