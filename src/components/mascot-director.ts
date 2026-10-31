@@ -20,7 +20,7 @@ export const REPERTOIRE: Readonly<Record<Exclude<MascotActivity, "idle">, readon
   thinking: ["dots", "downScanA", "downScanB", "downScanC", "ovalPonder", "shrinkPeek", "glanceLeft", "peekLeft", "spinUp"],
   reading: ["downScanA", "downScanB", "downScanC", "glanceLeft", "peekLeft", "ovalPonder"],
   command: ["attentive", "glanceUp", "frontBlink", "glanceUpAgain", "glanceUpLater", "squintGlance", "spinUp", "spinRight"],
-  writing: ["quill", "frontBlink", "attentive", "quill", "downScanA", "squintGlance"],
+  writing: ["frontBlink", "attentive", "downScanA", "squintGlance"],
   looking: ["lookUpRight", "glanceUpLeft", "glanceUp", "squintGlance", "glanceLeft", "spinRight"],
 };
 
@@ -47,6 +47,8 @@ const QUILL_IN_MS = 420;
 const QUILL_WRITE_MS = 2100;
 const QUILL_OUT_MS = 420;
 export const QUILL_MS = QUILL_IN_MS + QUILL_WRITE_MS + QUILL_OUT_MS;
+/** One quill per stretch of writing: edits in a row within this get the other writing gestures. */
+export const QUILL_REST_MS = 20_000;
 
 const ease = (t: number) => {
   const k = Math.max(0, Math.min(1, t));
@@ -109,6 +111,7 @@ export class MascotDirector {
   private dotsSince = 0;
   private recent: Gesture[] = [];
   private inFinale = false;
+  private quillAt = -Infinity;
 
   constructor(private readonly random: () => number = Math.random) {}
 
@@ -130,7 +133,8 @@ export class MascotDirector {
     const opening = was === "idle" && next === "thinking";
     const plan: Act[] = opening
       ? [{ kind: "fold" }, { kind: "dots", ms: OPENING_DOTS_MS }, { kind: "unfold" }]
-      : next === "writing" ? this.planOf("quill") : this.pick(next);
+      : next === "writing" && now - this.quillAt >= QUILL_REST_MS ? this.planOf("quill") : this.pick(next);
+    if (plan[0]?.kind === "quill") this.quillAt = now;
     this.cut(plan, now, shown);
   }
 

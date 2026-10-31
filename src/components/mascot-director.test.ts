@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MASCOT_CLIPS } from "./mascot-clips";
-import { FINALE_MS, MascotDirector, QUILL_MS, REPERTOIRE, SPIN_MS, leaseDirector, stagedFace } from "./mascot-director";
+import { FINALE_MS, MascotDirector, QUILL_MS, QUILL_REST_MS, REPERTOIRE, SPIN_MS, leaseDirector, stagedFace } from "./mascot-director";
 import { IDLE_FACE, trackFaceAt } from "./sphere-mascot";
 
 const sequence = (values: number[]) => {
@@ -121,6 +121,19 @@ describe("the new gestures", () => {
     expect(writing.ink).toBeLessThan(0.7);
     expect(stagedFace("quill", QUILL_MS).quill).toBe(0);
     expect(stagedFace("quill", QUILL_MS).ink).toBe(1);
+  });
+
+  it("brings the quill out once per stretch of writing, not again for edits in a row", () => {
+    expect(REPERTOIRE.writing).not.toContain("quill");
+    const director = new MascotDirector(sequence([0.5]));
+    director.setActivity("writing", 0, IDLE_FACE);
+    expect(director.current).toBe("quill");
+    director.setActivity("command", QUILL_MS + 100, director.frame(QUILL_MS + 100)!);
+    director.setActivity("writing", QUILL_MS + 2000, director.frame(QUILL_MS + 2000)!);
+    expect(director.current).not.toBe("quill");
+    director.setActivity("command", QUILL_REST_MS + 500, director.frame(QUILL_REST_MS + 500)!);
+    director.setActivity("writing", QUILL_REST_MS + 1000, director.frame(QUILL_REST_MS + 1000)!);
+    expect(director.current).toBe("quill");
   });
 
   it("finishes its line before moving on, even when the writing stops early", () => {

@@ -148,13 +148,12 @@ const STATE_BY_TOOL: Partial<Record<LocaleKey, MausState>> = {
 };
 
 /**
- * What a busy bot is doing right now, from the last message of its turn: writing while its reply comes in,
- * thinking until a tool is running, then reading, writing, looking at a screen or working, by the tool's kind.
+ * What a busy bot is doing right now, from the last message of its turn: thinking until a tool is running,
+ * then reading, writing, looking at a screen or working, by the tool's kind.
  */
 export function stateForBot(bot: MascotBotProfile): MausState {
   if (!bot.busy) return "idle";
   const last = lastNonReceipt(bot.messages);
-  if (last?.kind === "text" && last.role === "bot") return "writing";
   if (last?.kind !== "activity" || !last.tool?.name || last.tool.ok !== undefined) return "thinking";
   return STATE_BY_TOOL[toolActivityKey(last.tool.name)] ?? "working";
 }
