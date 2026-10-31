@@ -30,6 +30,7 @@ import {
   readSkillReferences,
   rejectStagedSkillWrite,
   removeSkill,
+  forkSkillText,
   replaceSkillText,
   scanSkillText,
   setSkillEnabled,
@@ -239,6 +240,12 @@ describe("editing a skill's text", () => {
     expect(replaceSkillText(bot, "edit-me", "no header")).toHaveProperty("error");
     expect(readSkillFile(bot, "edit-me")).toBe(edited);
     expect(replaceSkillText(bot, "missing-skill", SKILL("missing-skill"))).toHaveProperty("error");
+  });
+
+  it("gives a bot its own edited copy of a skill shared from this computer", () => {
+    expect(forkSkillText(bot, "shared-one", SKILL("shared-one", "Edited for this bot."), "edited:shared-one"))
+      .toMatchObject({ name: "shared-one", enabled: true, description: "Edited for this bot.", source: "edited:shared-one" });
+    expect(forkSkillText(bot, "shared-one", SKILL("renamed"), "edited:shared-one")).toHaveProperty("error");
   });
 
   it("leaves a switched-off skill switched off", () => {
@@ -1364,6 +1371,14 @@ describe("learned skill references", () => {
       "references/edge-cases.md",
     ]);
     expect(listSkills(bot)[0]).toMatchObject({ name: "file-expense", enabled: true });
+  });
+
+  it("lets the person edit a learned skill's SKILL.md and keeps its references", () => {
+    learn("create", [ref("edge-cases")]);
+    const edited = SKILL("file-expense", "Files expenses by hand.");
+    expect(replaceSkillText(bot, "file-expense", edited)).toMatchObject({ name: "file-expense", enabled: true, description: "Files expenses by hand." });
+    expect(readSkillFile(bot, "file-expense")).toBe(edited);
+    expect(readSkillReferences(bot, "file-expense")).toEqual([ref("edge-cases")]);
   });
 
   it("keeps unmentioned references on update, replaces named ones, and removes empty ones", () => {

@@ -2,12 +2,12 @@ import { z } from "zod";
 
 import type { SkillsLibrarySkillWire } from "../../shared/wire.ts";
 import type { AppConfig } from "../config.ts";
-import { importedSkillListings, setImportedSkillEnabled } from "../imported-skills.ts";
+import { importedSkillListings, readImportedSkills, setImportedSkillEnabled } from "../imported-skills.ts";
 import { botSkillTemplateSchema } from "../new-bot-defaults.ts";
 import { fetchSkillFromSource } from "../skill-fetch.ts";
-import { installLibrarySkill, listLibrarySkills, readLibrarySkillFile, readSkillLibraryIndex, setLibrarySkillReviewState, skillsLibraryEnabled } from "../skill-library.ts";
+import { installLibrarySkill, listLibrarySkills, readLibrarySkillFile, readSkillLibraryIndex, setLibrarySkillReviewState, skillsLibraryEnabled, updateLibrarySkill } from "../skill-library.ts";
 import {
-  installSkill, listBotSkillsWithOrigin, listStagedSkillWrites, parseSkillMd, removeSkill, replaceSkillText, scanSkillText, setSkillEnabled,
+  forkSkillText, installSkill, listBotSkillsWithOrigin, listSkills, listStagedSkillWrites, parseSkillMd, removeSkill, replaceSkillText, scanSkillText, setSkillEnabled,
   type SkillListing, type StagedSkillWrite,
 } from "../skills.ts";
 import type { BotRecord, Store } from "../store.ts";
@@ -96,7 +96,22 @@ export function createBotSkillsRoutes(deps: BotSkillsRouteDeps): RouteHandler {
       if (!store.bot(m[1])) return json(res, 404, { error: "no such bot" });
       const parsed = z.object({ text: z.string().min(1).max(200_000) }).safeParse(await readBody(req));
       if (!parsed.success) return json(res, 400, { error: "text must be the skill's SKILL.md" });
-      const result = replaceSkillText(m[1]!, m[2]!, parsed.data.text);
+      const bot = store.bot(m[1])!;
+      const name = m[2]!;
+      const own = listSkills(bot.id).some((skill) => skill.name === name);
+      const library = !own && skillsLibraryEnabled(cfg) && Boolean(bot.assignedSkills?.includes(name));
+      if (!own && !library && !readImportedSkills()[name]) return json(res, 404, { error: "no such skill" });
+      if (library) {
+        const entry = readSkillLibraryIndex()[name];
+        if (!entry) return json(res, 404, { error: "no such skill" });
+        const updated = updateLibrarySkill({ name, instructions: parsed.data.text, expectSha256: entry.sha256 });
+        if ("stale" in updated) return json(res, 409, { error: "the skill changed in the library meanwhile — open it again" });
+        if ("error" in updated) return json(res, 422, { error: updated.error });
+        return json(res, 200, { skill: updated });
+      }
+      const result = own
+        ? replaceSkillText(bot.id, name, parsed.data.text)
+        : forkSkillText(bot.id, name, parsed.data.text, `edited:${name}`);
       if ("error" in result) return json(res, 422, { error: result.error });
       return json(res, 200, { skill: result });
     }

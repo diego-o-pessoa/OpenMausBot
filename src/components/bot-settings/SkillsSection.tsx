@@ -1,9 +1,10 @@
-import { BookOpen, Trash2 } from "lucide-react";
+import { BookOpen, Pencil, Trash2 } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
 
 import { useStore, type Bot } from "@/state/store";
 import { useBotEditor } from "./BotEditorContext";
+import { SkillEditor, useSkillEditor } from "./SkillEditor";
 import { skillAuthoringEnabled, skillsLibraryEnabled } from "@/lib/feature-flags";
 import { Switch } from "../SettingsPrimitives";
 import { inputCls } from "./field";
@@ -273,6 +274,7 @@ export function SkillsSection({ bot }: { bot: Bot }) {
     libraryPool, addFromLibrary, setAddFromLibrary, assignmentBusy, putAssignments, addToBot,
   } = useManagedSkills(bot);
   const [viewing, setViewing] = useState<{ name: string; text: string } | null>(null);
+  const editor = useSkillEditor({ botId: bot.id, api, refresh: () => refresh(), working, setWorking, setError });
   const [source, setSource] = useState("");
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState("");
@@ -479,6 +481,17 @@ export function SkillsSection({ bot }: { bot: Bot }) {
                     disabled={Boolean(working)}
                     onClick={() => void toggle(skill)}
                   />
+                  {(
+                    <button
+                      aria-label={t("botPanel.skills.edit", { name: skill.name })}
+                      title={t("botPanel.skills.edit", { name: skill.name })}
+                      disabled={Boolean(working)}
+                      onClick={() => void editor.start(skill)}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-md text-ink-secondary hover:bg-control hover:text-ink disabled:opacity-40"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                  )}
                   {skill.origin !== "imported" && (
                     <button
                       aria-label={`Remove ${skill.name}`}
@@ -494,6 +507,15 @@ export function SkillsSection({ bot }: { bot: Bot }) {
                 <div className="mt-1 truncate text-[10.5px] text-ink-secondary" title={skill.source}>Source: {skill.source}</div>
                 {skill.warnings.length > 0 && (
                   <div className="mt-1 text-[10.5px] text-warning">{skill.warnings.join(" · ")}</div>
+                )}
+                {editor.editing?.name === skill.name && (
+                  <SkillEditor
+                    editing={editor.editing}
+                    working={Boolean(working)}
+                    onChange={(text) => editor.setEditing({ ...editor.editing!, text })}
+                    onCancel={() => editor.setEditing(null)}
+                    onSave={() => void editor.save()}
+                  />
                 )}
               </div>
             ))}

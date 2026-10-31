@@ -89,6 +89,12 @@ describe("skills library routes through an isolated HTTP fixture", () => {
     const enabled = await api("GET", "/api/skills-library");
     expect(enabled.body.skills[0]).toMatchObject({ enabled: true, assignedBots: [{ id: botId, name: "Skills fixture" }] });
 
+    const edited = SKILL_MD.replace("Check every line item", "Check every line item twice");
+    expect(await api("PUT", `/api/bots/${botId}/skills/order-audit`, { text: edited })).toMatchObject({ status: 200, body: { skill: { name: "order-audit" } } });
+    expect((await api("GET", "/api/skills-library/order-audit")).body.text).toContain("line item twice");
+    expect((await api("GET", `/api/bots/${botId}/skills`)).body.skills).toEqual([expect.objectContaining({ name: "order-audit", origin: "library" })]);
+    expect((await api("PUT", `/api/bots/${botId}/skills/not-there`, { text: edited })).status).toBe(404);
+
     expect((await api("PUT", `/api/bots/${botId}/skills-library`, { skills: [] }))).toMatchObject({
       status: 200,
       body: { assignedSkills: [] },
