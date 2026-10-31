@@ -50,7 +50,7 @@ const TOOLS = [
   {
     name: "ofertas_criar",
     readOnly: false,
-    description: "Cria uma oferta no bot a partir do link de afiliado e devolve a prévia: número (#12), preços do post já com o cupom, se a foto saiu, o que falta (falta) e onde a página do produto diverge do que você mandou (divergencias). A prévia aparece no grupo como \"🤖 criou #12\". No Mercado Livre, link é o meli.la da etiqueta telegram e link_whatsapp o da etiqueta whatsapp. Com cupom, mande cupom_pct para o bot calcular o Pix e o cartão. Recusa produto que já está aberto ou saiu nos últimos 7 dias.",
+    description: "Cria uma oferta no bot a partir do link de afiliado e devolve a prévia: número (#12), preços do post já com o cupom, se a foto saiu, o que falta (falta) e onde a página do produto diverge do que você mandou (divergencias). A prévia aparece no grupo como \"🤖 criou #12\". No Mercado Livre, link é o meli.la da etiqueta telegram e link_whatsapp o da etiqueta whatsapp. Com cupom, mande cupom_pct para o bot calcular o Pix e o cartão. Preços: preco_por = o principal (à vista), pix só se for menor, e o parcelado como está na página (parcelas + valor_parcela); o post sai com os dois preços. Recusa produto que já está aberto ou saiu nos últimos 7 dias, e produto indisponível.",
     inputSchema: {
       type: "object", additionalProperties: false,
       properties: {
@@ -58,9 +58,10 @@ const TOOLS = [
         link_whatsapp: { type: "string", description: "Mercado Livre: o meli.la da etiqueta whatsapp." },
         titulo: { type: "string", description: "Nome do produto, se a página não der." },
         preco_de: price, preco_por: price,
-        pix: { ...price, description: "Preço no Pix, se houver." },
-        cartao: { ...price, description: "Total no cartão, se houver." },
-        parcelas: { type: "integer", minimum: 1, description: "Número de parcelas do total no cartão." },
+        pix: { ...price, description: "Preço no Pix, só se a página mostrar um preço menor no Pix." },
+        cartao: { ...price, description: "Não precisa: o bot calcula o total parcelado (parcelas x valor_parcela). Se mandar, ele confere a conta." },
+        parcelas: { type: "integer", minimum: 1, description: "Número de parcelas, como na página (\"10x R$ 32,99\" é 10). Vai sempre com valor_parcela." },
+        valor_parcela: { ...price, description: "O valor de CADA parcela, como na página (\"10x R$ 32,99\" é 32.99). Obrigatório com parcelas." },
         cupom: { type: "string", description: "Código do cupom, se houver." },
         cupom_pct: { type: "number", exclusiveMinimum: 0, exclusiveMaximum: 100, description: "Desconto do cupom em %." },
         cupom_limite: { ...price, description: "Desconto máximo do cupom em R$, se houver." },
@@ -116,7 +117,8 @@ const TOOLS = [
         titulo: { type: ["string", "null"] }, descricao: { type: ["string", "null"], description: "A frase curta do post; null ou vazio tira." },
         preco_de: { ...price, type: ["number", "string", "null"] }, preco_por: price,
         pix: { ...price, type: ["number", "string", "null"] }, cartao: { ...price, type: ["number", "string", "null"] },
-        parcelas: { type: ["integer", "null"], minimum: 1, maximum: 24 },
+        parcelas: { type: ["integer", "null"], minimum: 1, maximum: 24, description: "Vai sempre com valor_parcela." },
+        valor_parcela: { ...price, description: "O valor de CADA parcela, como na página. Obrigatório com parcelas." },
         cupom: { type: ["string", "null"], description: "Só o código. Para calcular os preços com a %, use ofertas_cupom." },
         foto: { type: "string", description: "Endereço https da imagem do produto." },
       },
