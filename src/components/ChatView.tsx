@@ -1041,7 +1041,11 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
   const locale = activeLocale();
   const busy = Boolean(bot.busy);
   const openedAt = useThreadOpenedAt(bot.threadId);
-  const headerAnimated = busy || (mascotMotion?.kind ?? "none") !== "none";
+  // The agent's own mascots here share one director with its sidebar row (keyed by the agent), so they
+  // read the whole agent like the row does: a routine working in another chat keeps them working, and
+  // opening this idle chat must not tell the shared director the work ended (that played the finale).
+  const agentMascotState = stateForBot({ ...profile, messages });
+  const headerAnimated = Boolean(profile.busy) || (mascotMotion?.kind ?? "none") !== "none";
   const branch = useRef(messages);
   branch.current = messages;
   const onBranch = useCallback((messageId: string) => branch.current.some((m) => m.id === messageId), []);
@@ -1167,7 +1171,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
               >
                 <BotAvatar
                   bot={bot}
-                  state={stateForBot({ ...bot, messages })}
+                  state={agentMascotState}
                   size={24}
                   motion={mascotMotion?.kind ?? "none"}
                   motionKey={mascotMotion?.nonce ?? 0}
@@ -1202,7 +1206,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
               aria-label={t("chat.openProfileAria", { name: bot.name })}
               className={cn(CHATHEAD_PILL, "group h-9 gap-2.5 pl-2 pr-3.5 hover:bg-raised-hover")}
             >
-              <BotAvatar bot={bot} state={stateForBot({ ...bot, messages })} size={18}
+              <BotAvatar bot={bot} state={agentMascotState} size={18}
                 motion={mascotMotion?.kind ?? "none"} motionKey={mascotMotion?.nonce ?? 0} animated={headerAnimated} />
               <span className="min-w-0 truncate text-[14px] font-medium text-ink">{bot.name}</span>
               {chiefOfStaffBadge(bot)}
@@ -1352,7 +1356,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
             </div>
           )}
           <TurnPresence
-            avatar={<PresenceMascot bot={bot} state={stateForBot({ ...bot, messages })} />}
+            avatar={<PresenceMascot bot={bot} state={agentMascotState} />}
             visible={presenceVisible}
             phrases={activity.phrases}
             phase={activity.phase}
