@@ -52,13 +52,14 @@ const QUILL_SHAFT = "M0 -0.52L0 -0.2";
 const QUILL_SPINE = "M0 -0.62C0.01 -1.1 0.02 -1.6 0.03 -2.02";
 const QUILL_NIB = "M-0.13 -0.24L0.13 -0.24L0 0.06Z";
 const QUILL_EYES = [[-0.19, -1.62], [0.2, -1.55]] as const;
-const QUILL_LEAN = 28;
-const QUILL_SIZE = 0.78;
-const INK_LEFT = -0.9;
-const INK_WIDTH = 1.8;
-const INK_BASE = 0.8;
-const INK_WAVE = 0.125;
-const INK_STEP = 0.3;
+/** Lean, size and the ink line keep the quill inside the mascot's own square, off the text beside it. */
+const QUILL_LEAN = 18;
+const QUILL_SIZE = 0.6;
+const INK_LEFT = -0.8;
+const INK_WIDTH = 1.05;
+const INK_BASE = 0.82;
+const INK_WAVE = 0.09;
+const INK_STEP = 0.21;
 const INK_STEPS = 60;
 
 /** The written line up to `x`: a wave, one hump every INK_STEP. */
