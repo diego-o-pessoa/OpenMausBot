@@ -9,7 +9,11 @@ describe("stateForBot", () => {
     expect(stateForBot({ name: "Atlas", busy: true })).toBe("thinking");
     expect(stateForBot({ name: "Atlas", busy: true, messages: [{ kind: "text", role: "user" }] })).toBe("thinking");
     expect(stateForBot({ name: "Atlas", busy: true, messages: [{ kind: "activity", tool: { name: "bash", ok: true } }] })).toBe("thinking");
-    expect(stateForBot({ name: "Atlas", busy: true, messages: [{ kind: "text", role: "bot" }, { kind: "digest" }] })).toBe("thinking");
+  });
+
+  it("writes while its reply comes in", () => {
+    expect(stateForBot({ name: "Atlas", busy: true, messages: [{ kind: "text", role: "bot" }] })).toBe("writing");
+    expect(stateForBot({ name: "Atlas", busy: true, messages: [{ kind: "text", role: "bot" }, { kind: "digest" }] })).toBe("writing");
   });
 
   it("acts out the kind of tool that is running", () => {

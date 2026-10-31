@@ -237,6 +237,13 @@ describe("resolveRequestAuth", () => {
     expect(resolve({ host: "100.64.0.9:8799", "x-openmausbot-person": "Kayky" }).auth).toBeNull();
   });
 
+  it("names the person on a paired computer too, over the session's own label", () => {
+    const token = pairedToken();
+    const auth = resolve({ host: "localhost", authorization: `Bearer ${token}`, "x-openmausbot-person": "Kayky" }).auth;
+    expect(auth).toMatchObject({ kind: "session", person: "Kayky" });
+    expect(resolve({ host: "localhost", authorization: `Bearer ${token}` }).auth).not.toHaveProperty("person");
+  });
+
   it("reads the person's name with accents, and drops control characters and junk", () => {
     expect(personFromHeader(request({ "x-openmausbot-person": encodeURIComponent("  João\u0007  Pessoa ") }))).toBe("João Pessoa");
     expect(personFromHeader(request({ "x-openmausbot-person": "%E0%A4%A" }))).toBeUndefined();

@@ -18,7 +18,11 @@ export type RequestAuth =
      * as its owner (each desktop through its own SSH tunnel): this only names them, it grants nothing. */
     person?: string;
   }
-  | { kind: "session"; session: SessionRecord; via: "bearer" | "cookie" | "ticket"; scopes: readonly Scope[] };
+  | {
+    kind: "session"; session: SessionRecord; via: "bearer" | "cookie" | "ticket"; scopes: readonly Scope[];
+    /** The name the person gave on the paired computer; it names them over the session's label, nothing more. */
+    person?: string;
+  };
 
 export interface RequestAuthResult {
   auth: RequestAuth | null;
@@ -494,7 +498,8 @@ export function resolveRequestAuth(req: IncomingMessage, options: ResolveOptions
     }
     // Redeeming a stream ticket does not renew: an unattended open stream must not keep a session alive.
     if (via !== "ticket") options.sessions.renew(session.id);
-    return { auth: { kind: "session", session, via, scopes: session.scopes }, status: 401, error: "" };
+    const person = personFromHeader(req);
+    return { auth: { kind: "session", session, via, scopes: session.scopes, ...(person ? { person } : {}) }, status: 401, error: "" };
   }
 
   // A removed member's invalid credential must not fall back to loopback owner.

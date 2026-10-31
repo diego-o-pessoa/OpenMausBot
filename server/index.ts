@@ -824,7 +824,7 @@ function speakerNote(sender: ResolvedSender | undefined, profileName: string | u
 
 function messageSender(auth: RequestAuth): ResolvedSender | undefined {
   if (auth.kind !== "session") return auth.person ? { name: auth.person } : undefined;
-  const name = (auth.session.email ?? auth.session.label ?? "").trim();
+  const name = (auth.person ?? auth.session.email ?? auth.session.label ?? "").trim();
   return name ? { name, id: actorKey(auth) } : undefined;
 }
 
@@ -10776,7 +10776,8 @@ async function runClaimedGroupMemberTurn(
       : "");
   const liveRosterBlock = !orchestration?.liveRoster || orchestration.resumed ? "" : `\n\n${orchestration.liveRoster}`;
   const heldReplay = heldReplayFor(group.id, threadId, bot.id, userName, roomContext);
-  const roomTail = `\n\n(Reply to the conversation above as ${bot.name}.)${learnBlock}${heldReplay.block}${cardContinuation ? `\n\n${cardContinuation}` : ""}${coordinationReminder}${liveRosterBlock}`;
+  const writerNote = speakerNote(latestUser?.sender, cfg.profile?.name).trim();
+  const roomTail = `\n\n(Reply to the conversation above as ${bot.name}.)${writerNote ? `\n${writerNote}` : ""}${learnBlock}${heldReplay.block}${cardContinuation ? `\n\n${cardContinuation}` : ""}${coordinationReminder}${liveRosterBlock}`;
   const text = roomContext + roomTail;
 
   const worksInWorkspace = supportsWorkspaceFiles(instance.driverKind);

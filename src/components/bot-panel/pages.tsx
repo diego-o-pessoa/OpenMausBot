@@ -22,7 +22,7 @@ import { BrowserLogins } from "./browser-logins";
 import { useOpenComputer } from "./ComputerTab";
 import { memoryNotes, withMemoryNote, withoutMemoryNote } from "./memory-notes";
 import type { SimplePageId } from "./page-registry";
-import { BotSwitch, buttonCls, Card, LinkRow, NoteRow, RadioRow, rowCls, SwitchRow, TextRow, TrashButton } from "./rows";
+import { BotSwitch, buttonCls, Card, EditButton, LinkRow, NoteRow, RadioRow, rowCls, SwitchRow, TextRow, TrashButton } from "./rows";
 import { useMemoryDoc } from "./use-memory-doc";
 
 type Derived = ReturnType<typeof useBotSettingsDerived>;
@@ -207,6 +207,11 @@ export function MemoryPage({ bot }: PageContext) {
   );
 }
 
+/** A bot's own skill, edited in place; library and computer-wide skills are changed where they live. */
+function editableSkill(skill: ManagedSkill): boolean {
+  return skill.origin !== "library" && skill.origin !== "imported" && !skill.source.startsWith("learn");
+}
+
 export function SkillsPage({ bot }: PageContext) {
   const { request: api } = useBotEditor();
   const { state, dispatch } = useStore();
@@ -214,6 +219,32 @@ export function SkillsPage({ bot }: PageContext) {
   const [source, setSource] = useState("");
   const [importing, setImporting] = useState(false);
   const libraryOn = skillsLibraryEnabled(state.config);
+  const [editing, setEditing] = useState<{ name: string; text: string } | null>(null);
+
+  const startEdit = async (skill: ManagedSkill) => {
+    if (skills.working) return;
+    skills.setError("");
+    try {
+      const { text } = (await api(`/api/bots/${bot.id}/skills/${encodeURIComponent(skill.name)}`)) as { text: string };
+      setEditing({ name: skill.name, text });
+    } catch (cause) {
+      skills.setError(errorText(cause, t("botPanel.skills.editFailed")));
+    }
+  };
+  const saveEdit = async () => {
+    if (!editing || skills.working) return;
+    skills.setWorking(editing.name);
+    skills.setError("");
+    try {
+      await api(`/api/bots/${bot.id}/skills/${encodeURIComponent(editing.name)}`, { method: "PUT", body: JSON.stringify({ text: editing.text }) });
+      setEditing(null);
+      await skills.refresh();
+    } catch (cause) {
+      skills.setError(errorText(cause, t("botPanel.skills.editFailed")));
+    } finally {
+      skills.setWorking("");
+    }
+  };
 
   const remove = async (skill: ManagedSkill) => {
     if (skills.working) return;
@@ -274,11 +305,34 @@ export function SkillsPage({ bot }: PageContext) {
             checked={skill.enabled}
             disabled={Boolean(skills.working)}
             onChange={() => void skills.toggle(skill)}
-            extra={<TrashButton data-panel-action={`remove-skill:${skill.name}`} label={t("botPanel.skills.remove", { name: skill.name })} disabled={Boolean(skills.working)} onClick={() => void remove(skill)} />}
+            extra={<>
+              {editableSkill(skill) && <EditButton data-panel-action={`edit-skill:${skill.name}`} label={t("botPanel.skills.edit", { name: skill.name })} disabled={Boolean(skills.working)} onClick={() => void startEdit(skill)} />}
+              <TrashButton data-panel-action={`remove-skill:${skill.name}`} label={t("botPanel.skills.remove", { name: skill.name })} disabled={Boolean(skills.working)} onClick={() => void remove(skill)} />
+            </>}
           />
         ))}
         {skills.error && !skills.reviewing && <NoteRow tone="warn">{skills.error}</NoteRow>}
       </Card>
+      {editing && (
+        <Card>
+          <div className="flex flex-col gap-2 px-3.5 py-3" data-panel-form="skill-edit">
+            <div className="text-[13.5px] font-medium text-ink">{t("botPanel.skills.editing", { name: editing.name })}</div>
+            <div className="text-[12.5px] leading-[1.35] text-ink-secondary">{t("botPanel.skills.editHint")}</div>
+            <textarea
+              aria-label={t("botPanel.skills.editing", { name: editing.name })}
+              value={editing.text}
+              onChange={(event) => setEditing({ ...editing, text: event.target.value })}
+              spellCheck={false}
+              rows={16}
+              className="w-full resize-y rounded-lg border border-hairline/40 bg-inset px-3 py-2 font-mono text-[12.5px] leading-[1.45] text-ink focus:outline-none"
+            />
+            <div className="flex justify-end gap-2">
+              <button type="button" className={buttonCls} disabled={Boolean(skills.working)} onClick={() => setEditing(null)}>{t("common.cancel")}</button>
+              <button type="button" data-panel-action="save-skill" className={buttonCls} disabled={Boolean(skills.working) || !editing.text.trim()} onClick={() => void saveEdit()}>{t("common.save")}</button>
+            </div>
+          </div>
+        </Card>
+      )}
       <Card>
         <TextRow
           data-panel-form="skill-import"
