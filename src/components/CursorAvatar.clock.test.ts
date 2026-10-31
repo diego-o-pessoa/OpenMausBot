@@ -137,6 +137,16 @@ describe("the mascot on the shared clock", () => {
     expect(mascotClock().pending()).toBe(2);
   });
 
+  it("stops performing once its work ends, and only blinks while it rests", () => {
+    render([{ state: "thinking", size: 36, syncKey: "samu" }]);
+    run(2000);
+    render([{ state: "idle", size: 36, syncKey: "samu" }]);
+    run(FINALE_MS + 1000);
+    frameRequests = 0;
+    run(20_000);
+    expect(frameRequests).toBeLessThan(150);
+  });
+
   it("rests between the blinks it gives on its own, drawing nothing while it waits", () => {
     const random = vi.spyOn(Math, "random").mockReturnValue(0.5);
     const ref = createRef<MausAvatarHandle>();

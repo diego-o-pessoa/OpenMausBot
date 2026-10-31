@@ -19,16 +19,13 @@ type Gesture = MascotClipName | "dots" | Spin | "quill";
 export const REPERTOIRE: Readonly<Record<Exclude<MascotActivity, "idle">, readonly Gesture[]>> = {
   thinking: ["dots", "downScanA", "downScanB", "downScanC", "ovalPonder", "shrinkPeek", "glanceLeft", "peekLeft", "spinUp"],
   reading: ["downScanA", "downScanB", "downScanC", "glanceLeft", "peekLeft", "ovalPonder"],
-  command: ["attentive", "glanceUp", "frontBlink", "glanceUpAgain", "rollThrough", "glanceUpLater", "rollDown", "squintGlance", "dropAndBack", "spinUp", "spinRight"],
+  command: ["attentive", "glanceUp", "frontBlink", "glanceUpAgain", "glanceUpLater", "squintGlance", "spinUp", "spinRight"],
   writing: ["quill", "frontBlink", "attentive", "quill", "downScanA", "squintGlance"],
-  looking: ["rollAway", "lookUpRight", "glanceUpLeft", "glanceUp", "squintGlance", "glanceLeft", "spinRight"],
+  looking: ["lookUpRight", "glanceUpLeft", "glanceUp", "squintGlance", "glanceLeft", "spinRight"],
 };
 
-/** What a resting mascot does now and then, so it never sits frozen. */
-export const IDLE_GESTURES: readonly Gesture[] = ["frontBlink", "glanceLeft", "lookUpRight", "glanceUpLeft", "peekLeft", "spinRight", "spinUp"];
-
 type Act =
-  | { kind: "clip"; name: MascotClipName }
+  | { kind: "clip"; name: MascotClipName; from?: number; to?: number }
   | { kind: "fold" }
   | { kind: "dots"; ms: number }
   | { kind: "unfold" }
@@ -43,7 +40,7 @@ const UNFOLD_MS = 350;
 /** Grok keeps its dots up while it is "Refletindo"; past this it moves on to other thinking gestures. */
 const OPENING_DOTS_MS = 3 * DOT_CYCLE_MS;
 const DOTS_GESTURE_MS = 2 * DOT_CYCLE_MS;
-const FRONT_HOLD_MS = 5000;
+const FRONT_HOLD_MS = 1200;
 const UNREPEATED = 3;
 export const SPIN_MS = 950;
 const QUILL_IN_MS = 420;
@@ -68,7 +65,7 @@ function clipFaceAt(name: MascotClipName, elapsed: number): Face {
 function actMs(act: Act): number {
   switch (act.kind) {
     case "clip":
-      return trackDurationMs(MASCOT_CLIPS[act.name]);
+      return (act.to ?? trackDurationMs(MASCOT_CLIPS[act.name])) - (act.from ?? 0);
     case "fold":
       return FOLD_MS;
     case "unfold":
@@ -82,14 +79,20 @@ function actMs(act: Act): number {
   }
 }
 
+/** glanceUp ends in a blink that only pretends the sphere turned over; the real turn is spinUp. */
+const CLIP_WINDOWS: Partial<Record<MascotClipName, { from?: number; to?: number }>> = { glanceUp: { to: 2600 } };
+
+/** The hops of Grok's celebration: before and after them it only holds its smile. */
+const HOPS = { from: 2200, to: 4600 };
+
 const FINALE_ACTS: readonly Act[] = [
-  { kind: "clip", name: "celebrate" },
+  { kind: "clip", name: "celebrate", ...HOPS },
   { kind: "hold", face: FRONT_FACE, ms: FRONT_HOLD_MS },
   { kind: "clip", name: "settle" },
 ];
 
-/** How long the mascot performs after its work ends: typing, the smile and hops, facing front, settling. */
-export const FINALE_MS = actMs({ kind: "clip", name: "typing" }) + FINALE_ACTS.reduce((sum, act) => sum + actMs(act), 0);
+/** How long the mascot performs after its work ends: the smile and hops, a moment facing front, settling. */
+export const FINALE_MS = FINALE_ACTS.reduce((sum, act) => sum + actMs(act), 0);
 
 /**
  * Plans what the mascot acts out. While it works it plays one measured gesture after another from the
@@ -120,7 +123,7 @@ export class MascotDirector {
     const was = this.activity;
     this.activity = next;
     if (next === "idle") {
-      if (was !== "idle") this.finale(now, shown, true);
+      if (was !== "idle") this.finale(now, shown);
       return;
     }
     this.inFinale = false;
@@ -131,15 +134,9 @@ export class MascotDirector {
     this.cut(plan, now, shown);
   }
 
-  /** One small gesture while resting; nothing if it is already performing. */
-  stir(now: number, shown: Face): void {
-    if (this.act || this.activity !== "idle") return;
-    this.begin(this.planOf(this.choose(IDLE_GESTURES)), now, shown);
-  }
-
   /** Plays the smile and hops on request; a finale already under way is left to finish. */
   celebrate(now: number, shown: Face): void {
-    if (!this.inFinale) this.finale(now, shown, false);
+    if (!this.inFinale) this.finale(now, shown);
   }
 
   /** The face to draw at `now`, or null when there is nothing to perform. */
@@ -166,9 +163,9 @@ export class MascotDirector {
     return this.last;
   }
 
-  private finale(now: number, shown: Face, typed: boolean): void {
+  private finale(now: number, shown: Face): void {
     this.inFinale = true;
-    this.cut([...(typed ? [{ kind: "clip", name: "typing" } as const] : []), ...FINALE_ACTS], now, shown);
+    this.cut([...FINALE_ACTS], now, shown);
   }
 
   private pick(activity: Exclude<MascotActivity, "idle">): Act[] {
@@ -187,7 +184,7 @@ export class MascotDirector {
     if (gesture === "dots") return [{ kind: "fold" }, { kind: "dots", ms: DOTS_GESTURE_MS }, { kind: "unfold" }];
     if (gesture === "spinUp" || gesture === "spinRight") return [{ kind: "spin", name: gesture }];
     if (gesture === "quill") return [{ kind: "quill" }];
-    return [{ kind: "clip", name: gesture }];
+    return [{ kind: "clip", name: gesture, ...CLIP_WINDOWS[gesture] }];
   }
 
   private cut(plan: Act[], now: number, shown: Face): void {
@@ -218,7 +215,7 @@ export class MascotDirector {
   }
 
   private firstFaceOf(act: Act | undefined): Face {
-    if (act?.kind === "clip") return clipFaceAt(act.name, 0);
+    if (act?.kind === "clip") return clipFaceAt(act.name, act.from ?? 0);
     if (act?.kind === "hold") return act.face;
     return FRONT_FACE;
   }
@@ -227,7 +224,7 @@ export class MascotDirector {
     const fade = ease(elapsed / FADE_MS);
     switch (act.kind) {
       case "clip":
-        return mixFace(this.from, clipFaceAt(act.name, elapsed), fade);
+        return mixFace(this.from, clipFaceAt(act.name, (act.from ?? 0) + elapsed), fade);
       case "hold":
         return mixFace(this.from, act.face, fade);
       case "spin":

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { MASCOT_CLIPS } from "./mascot-clips";
-import { FINALE_MS, IDLE_GESTURES, MascotDirector, QUILL_MS, REPERTOIRE, SPIN_MS, leaseDirector, stagedFace } from "./mascot-director";
-import { IDLE_FACE, trackDurationMs, trackFaceAt } from "./sphere-mascot";
+import { FINALE_MS, MascotDirector, QUILL_MS, REPERTOIRE, SPIN_MS, leaseDirector, stagedFace } from "./mascot-director";
+import { IDLE_FACE, trackFaceAt } from "./sphere-mascot";
 
 const sequence = (values: number[]) => {
   let i = 0;
@@ -58,29 +58,29 @@ describe("MascotDirector", () => {
     expect(REPERTOIRE.command).toContain(director.current);
   });
 
-  it("finishes a turn as Grok does: typing, the smile and hops, facing front, then settling, then rests", () => {
+  it("finishes a turn briefly: the smile and hops, a moment facing front, settling, then rests", () => {
     const director = new MascotDirector(sequence([0.4]));
     director.setActivity("command", 0, IDLE_FACE);
     director.frame(500);
     director.setActivity("idle", 500, director.frame(500)!);
-    expect(watch(director, 500, FINALE_MS + 200)).toEqual(["typing", "celebrate", "hold", "settle"]);
+    expect(watch(director, 500, FINALE_MS + 200)).toEqual(["celebrate", "hold", "settle"]);
+    expect(FINALE_MS).toBeLessThan(6000);
     expect(director.frame(500 + FINALE_MS + 300)).toBeNull();
   });
 
-  it("goes straight from its dots into typing when a short reply arrives", () => {
+  it("goes straight from its dots into the smile when a short reply arrives", () => {
     const director = new MascotDirector(sequence([0]));
     director.setActivity("thinking", 0, IDLE_FACE);
     director.setActivity("idle", 1500, director.frame(1500)!);
-    expect(watch(director, 1500, 2000).slice(0, 3)).toEqual(["unfold", "typing", "celebrate"]);
+    expect(watch(director, 1500, 2000).slice(0, 2)).toEqual(["unfold", "celebrate"]);
   });
 
   it("does not restart a celebration already under way", () => {
     const director = new MascotDirector(sequence([0]));
     director.setActivity("command", 0, IDLE_FACE);
     director.setActivity("idle", 100, director.frame(100)!);
-    const typingMs = trackDurationMs(MASCOT_CLIPS.typing);
-    director.frame(100 + typingMs + 500);
-    director.celebrate(100 + typingMs + 500, IDLE_FACE);
+    director.frame(400);
+    director.celebrate(400, IDLE_FACE);
     expect(director.current).toBe("celebrate");
     expect(director.frame(100 + FINALE_MS + 100)).toBeNull();
   });
@@ -140,15 +140,15 @@ describe("the new gestures", () => {
     director.setActivity("looking", 0, IDLE_FACE);
     expect(director.current).toBe("spinRight");
   });
+});
 
-  it("stirs now and then while resting, but never over work", () => {
-    const resting = new MascotDirector(sequence([0]));
-    resting.stir(0, IDLE_FACE);
-    expect(IDLE_GESTURES).toContain(resting.current);
-    const working = new MascotDirector(sequence([0]));
-    working.setActivity("reading", 0, IDLE_FACE);
-    const before = working.current;
-    working.stir(10, IDLE_FACE);
-    expect(working.current).toBe(before);
+describe("turning over", () => {
+  it("never fakes a turn with a blink: only the real spins turn the sphere", () => {
+    const fakes = ["rollThrough", "rollDown", "rollAway", "dropAndBack"];
+    for (const repertoire of Object.values(REPERTOIRE)) for (const fake of fakes) expect(repertoire).not.toContain(fake);
+    const director = new MascotDirector(sequence([0.15]));
+    director.setActivity("command", 0, IDLE_FACE);
+    expect(director.current).toBe("glanceUp");
+    for (let t = 0; t <= 2600; t += 50) expect(director.frame(t)!.eyes[0].length).toBeGreaterThan(0.2);
   });
 });
