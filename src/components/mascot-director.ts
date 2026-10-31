@@ -188,6 +188,10 @@ export class MascotDirector {
   }
 
   private cut(plan: Act[], now: number, shown: Face): void {
+    if (this.act?.kind === "quill") {
+      this.queue = plan;
+      return;
+    }
     const folded = this.act?.kind === "fold" || this.act?.kind === "dots";
     if (folded && plan[0]?.kind === "fold") {
       this.queue = plan.slice(1);

@@ -642,6 +642,32 @@ export function removeSkill(botId: string, name: string): { removed: true } | { 
   return { removed: true };
 }
 
+/**
+ * The person's own edit of a skill's SKILL.md, from the bot's skills page: same name, same source, and the
+ * switch left as it was, since the person is the review. Skills with more than SKILL.md (learned references,
+ * organization packages) and skills a bot learned are edited their own way, not here.
+ */
+export function replaceSkillText(botId: string, name: string, text: string): SkillListing | { error: string } {
+  if (!isSkillName(name)) return { error: "invalid skill name" };
+  const entry = readManifest(botId)[name];
+  if (!entry) return { error: `no skill of this bot named "${name}"` };
+  if (entry.referencesSha256 || entry.package || entry.source.startsWith(LEARN_SOURCE_PREFIX)) {
+    return { error: "this skill is not edited here" };
+  }
+  const previous = readSkillFile(botId, name);
+  if (previous === null) return { error: "stored SKILL.md changed after review — remove and import it again" };
+  const prepared = preparedSkillFiles([{ path: "SKILL.md", content: text }]);
+  if ("error" in prepared) return prepared;
+  if (prepared.parsed.name !== name) return { error: `keep the name "${name}" in the SKILL.md header` };
+  const removed = removeSkill(botId, name);
+  if ("error" in removed) return removed;
+  const installed = installPreparedSkill(botId, entry.source, prepared, { enabled: entry.enabled });
+  if (!("error" in installed)) return installed;
+  const restore = preparedSkillFiles([{ path: "SKILL.md", content: previous }]);
+  if (!("error" in restore)) installPreparedSkill(botId, entry.source, restore, { enabled: entry.enabled });
+  return installed;
+}
+
 export type StagedSkillAction = "create" | "update";
 
 export interface StagedSkillWrite {

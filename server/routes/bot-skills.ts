@@ -7,7 +7,7 @@ import { botSkillTemplateSchema } from "../new-bot-defaults.ts";
 import { fetchSkillFromSource } from "../skill-fetch.ts";
 import { installLibrarySkill, listLibrarySkills, readLibrarySkillFile, readSkillLibraryIndex, setLibrarySkillReviewState, skillsLibraryEnabled } from "../skill-library.ts";
 import {
-  installSkill, listBotSkillsWithOrigin, listStagedSkillWrites, parseSkillMd, removeSkill, scanSkillText, setSkillEnabled,
+  installSkill, listBotSkillsWithOrigin, listStagedSkillWrites, parseSkillMd, removeSkill, replaceSkillText, scanSkillText, setSkillEnabled,
   type SkillListing, type StagedSkillWrite,
 } from "../skills.ts";
 import type { BotRecord, Store } from "../store.ts";
@@ -90,6 +90,14 @@ export function createBotSkillsRoutes(deps: BotSkillsRouteDeps): RouteHandler {
       }
       const result = setSkillEnabled(m[1]!, m[2]!, parsed.data.enabled);
       if ("error" in result) return json(res, 404, { error: result.error });
+      return json(res, 200, { skill: result });
+    }
+    if (m && method === "PUT") {
+      if (!store.bot(m[1])) return json(res, 404, { error: "no such bot" });
+      const parsed = z.object({ text: z.string().min(1).max(200_000) }).safeParse(await readBody(req));
+      if (!parsed.success) return json(res, 400, { error: "text must be the skill's SKILL.md" });
+      const result = replaceSkillText(m[1]!, m[2]!, parsed.data.text);
+      if ("error" in result) return json(res, 422, { error: result.error });
       return json(res, 200, { skill: result });
     }
     if (m && method === "DELETE") {

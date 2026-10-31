@@ -884,6 +884,25 @@ describe("the drill-in pages", () => {
     expect(body("memory").html).toContain("Scout changed this file while you were editing.");
   });
 
+  it("edits a bot's own skill in place, and leaves a library skill to the library", async () => {
+    const text = "---\nname: summarise\ndescription: Sums up.\n---\nBe brief.\n";
+    fixture.skills.skills = [skill("triage", true, "library"), skill("summarise", false)];
+    fixture.api = vi.fn((...args: unknown[]) => Promise.resolve((args[1] as RequestInit | undefined)?.method === "PUT" ? {} : { text }));
+    const rendered = body("skills");
+    expect(has(rendered, "data-panel-action", "edit-skill:triage")).toBe(false);
+    click(find(rendered, "data-panel-action", "edit-skill:summarise"));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(fixture.api).toHaveBeenCalledWith("/api/bots/scout/skills/summarise");
+    const editor = body("skills");
+    expect(has(editor, "data-panel-form", "skill-edit")).toBe(true);
+    click(find(editor, "data-panel-action", "save-skill"));
+    await Promise.resolve();
+    expect(fixture.api).toHaveBeenCalledWith("/api/bots/scout/skills/summarise", { method: "PUT", body: JSON.stringify({ text }) });
+    await Promise.resolve();
+    expect(fixture.skills.refresh).toHaveBeenCalled();
+  });
+
   it("switches skills, removes one, adds one from a link and browses the library or skills.sh", async () => {
     const off = skill("summarise", false);
     const shared = skill("triage", true, "library");

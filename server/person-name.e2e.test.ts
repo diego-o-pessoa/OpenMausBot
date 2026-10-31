@@ -10,7 +10,7 @@ it("tells a bot who wrote when someone other than the owner uses the desktop", a
   const scratch = mkdtempSync(join(tmpdir(), "omb-person-"));
   const promptLog = join(scratch, "prompts.jsonl");
   const fixture = await launchVerificationServer({
-    FAKE_CLAUDE_REPLIES: JSON.stringify(["Oi, Kayky.", "Oi."]),
+    FAKE_CLAUDE_REPLIES: JSON.stringify(["Oi, Kayky.", "Oi.", "Oi no grupo, Kayky."]),
     FAKE_CLAUDE_REPLY_STATE: join(scratch, "reply-state"),
     FAKE_CLAUDE_TOOL_CALLS: "[]",
     FAKE_CLAUDE_PROMPTS: promptLog,
@@ -44,6 +44,14 @@ it("tells a bot who wrote when someone other than the owner uses the desktop", a
     expect(prompts()[0]).toContain("(This message is from Kayky, not Diego. Address Kayky by name.)\n\nQuantas ofertas hoje?");
     expect(prompts()[1]).not.toContain("This message is from");
     expect((await transcript()).filter((message) => message.role === "user").map((message) => message.sender?.name)).toEqual(["Kayky", "diego"]);
+
+    const { group } = await api("POST", "/api/groups", {
+      name: "Diretoria", memberIds: [bot.id], setup: { bulletin: "", defaultResponder: { kind: "member", botId: bot.id } },
+    }, 201);
+    await api("POST", `/api/groups/${group.id}/messages`, { text: "Bom dia, equipe" }, 202, "Kayky");
+    await expect.poll(() => prompts().length, { timeout: 20_000 }).toBe(3);
+    expect(prompts()[2]).toContain("Kayky: Bom dia, equipe");
+    expect(prompts()[2]).toContain("(This message is from Kayky, not Diego. Address Kayky by name.)");
   } finally {
     await fixture.close();
     await removeTempDir(scratch);

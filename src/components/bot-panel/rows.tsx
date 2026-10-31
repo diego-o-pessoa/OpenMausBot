@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Check, ChevronLeft, ChevronRight, Trash2, type LucideIcon } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Pencil, Trash2, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { MAUS_COLORS, type MausColor } from "@/lib/mascot";
@@ -217,6 +217,27 @@ export function SegmentedRow<V extends string>({ title, hint, footer, ...segment
       <Segmented {...segmented} />
       {footer}
     </ColRow>
+  );
+}
+
+export function EditButton({ label, onClick, disabled, ...rest }: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  "data-panel-action"?: string;
+}) {
+  return (
+    <button
+      type="button"
+      {...rest}
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink-tertiary hover:bg-ink/[0.05] hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <Pencil size={14} aria-hidden="true" />
+    </button>
   );
 }
 

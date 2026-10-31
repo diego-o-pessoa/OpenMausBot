@@ -123,6 +123,22 @@ describe("the new gestures", () => {
     expect(stagedFace("quill", QUILL_MS).ink).toBe(1);
   });
 
+  it("finishes its line before moving on, even when the writing stops early", () => {
+    const director = new MascotDirector(sequence([0.5]));
+    director.setActivity("writing", 0, IDLE_FACE);
+    director.frame(100);
+    director.setActivity("thinking", 300, director.frame(300)!);
+    expect(director.current).toBe("quill");
+    expect(director.frame(QUILL_MS - 50)!.quill).toBeGreaterThan(0);
+    director.frame(QUILL_MS + 100);
+    expect(director.current).not.toBe("quill");
+    const ending = new MascotDirector(sequence([0.5]));
+    ending.setActivity("writing", 0, IDLE_FACE);
+    ending.setActivity("idle", 200, ending.frame(200)!);
+    expect(ending.current).toBe("quill");
+    expect(watch(ending, 200, QUILL_MS + FINALE_MS)).toEqual(["quill", "celebrate", "hold", "settle"]);
+  });
+
   it("spins a whole turn, fastest in the middle, with the wind behind it, and ends facing front", () => {
     const up = [0, SPIN_MS / 4, SPIN_MS / 2, (3 * SPIN_MS) / 4].map((t) => stagedFace("spinUp", t));
     expect(up.map((face) => face.roll)).toEqual(up.map((face) => face.roll).sort((a, b) => a - b));
