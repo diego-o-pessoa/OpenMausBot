@@ -170,7 +170,26 @@ function Strip() {
   );
 }
 
+/** `?live=spinUp|spinRight|quill`: the gesture played over and over, for screen recordings. */
+function Live() {
+  const gesture = (new URLSearchParams(location.search).get("live") ?? "spinUp") as "spinUp" | "spinRight" | "quill";
+  const ms = (gesture === "quill" ? QUILL_MS : SPIN_MS) + 500;
+  const [t, setT] = useState(0);
+  useEffect(() => {
+    let frame = requestAnimationFrame(function tick(now) {
+      setT(now % ms);
+      frame = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [ms]);
+  return (
+    <div style={{ background: "#f0f0f0", width: 260, height: 260, padding: 50 }}>
+      <SphereMascot face={stagedFace(gesture, t)} size={160} fill="#111111" silhouette={MASCOT_BODIES.circle} interactive={false} />
+    </div>
+  );
+}
+
 const params = new URLSearchParams(location.search);
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>{params.has("strip") ? <Strip /> : params.has("faces") ? <FaceSheet /> : params.has("solo") ? <Solo /> : <Gallery />}</StrictMode>,
+  <StrictMode>{params.has("live") ? <Live /> : params.has("strip") ? <Strip /> : params.has("faces") ? <FaceSheet /> : params.has("solo") ? <Solo /> : <Gallery />}</StrictMode>,
 );

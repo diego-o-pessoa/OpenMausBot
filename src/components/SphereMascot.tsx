@@ -36,11 +36,14 @@ const PRESS_MS = trackDurationMs(PRESS_TRACK);
 /** Grok watches the pointer anywhere on the agent's row; the row marks itself with this attribute. */
 const HOVER_REGION = "[data-mascot-hover]";
 const WIND_LINES = [
-  { offset: -0.45, length: 0.75, phase: 0 },
-  { offset: 0, length: 1, phase: 0.35 },
-  { offset: 0.45, length: 0.6, phase: 0.7 },
+  { offset: -0.38, length: 0.8, phase: 0 },
+  { offset: 0, length: 1, phase: 0.33 },
+  { offset: 0.38, length: 0.7, phase: 0.66 },
 ] as const;
-const WIND_CYCLE_MS = 260;
+/** Each speed line leaves the body, streams this far away (body radii) and fades, then starts again. */
+const WIND_CYCLE_MS = 340;
+const WIND_START = 1.08;
+const WIND_TRAVEL = 0.45;
 /** The quill, nib at the origin and y down, in body radii: a feather vane, its shaft and a nib. */
 const QUILL_VANE =
   "M0 -0.5C-0.32 -0.75 -0.45 -1 -0.47 -1.15L-0.28 -1.2L-0.45 -1.38C-0.42 -1.75 -0.2 -2.05 0.04 -2.2" +
@@ -68,7 +71,6 @@ function inkPath(x: number): string {
   return `M${points.join("L")}`;
 }
 const BLINK_GAP_MS: readonly [number, number] = [2500, 6500];
-const STIR_GAP_MS: readonly [number, number] = [9000, 20000];
 const between = ([low, high]: readonly [number, number]) => low + Math.random() * (high - low);
 
 export interface SphereMascotProps {
@@ -123,7 +125,6 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
     last: 0,
     drawn: "",
     nextBlink: 0,
-    nextStir: 0,
   });
   engine.current.props = { activity, pinned: face, paused, interactive, sizePx, centre };
   const wake = () => ticket.current?.wake();
@@ -199,14 +200,9 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       const alive = !p.pinned && !p.paused;
       if (alive) {
         if (!e.nextBlink) e.nextBlink = now + between(BLINK_GAP_MS);
-        if (!e.nextStir) e.nextStir = now + between(STIR_GAP_MS);
         if (now >= e.nextBlink) {
           if (e.blinkStart === null && e.face.quill < 0.01 && e.face.dots < 0.01) e.blinkStart = now;
           e.nextBlink = now + between(BLINK_GAP_MS);
-        }
-        if (now >= e.nextStir) {
-          if (p.activity === "idle" && !e.hover) e.director?.stir(now, e.face);
-          e.nextStir = now + between(STIR_GAP_MS);
         }
       }
       const target = targetFace(now);
@@ -260,18 +256,22 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       const rising = f.wind > 0;
       const drift = gust > 0.01 ? (now % WIND_CYCLE_MS) / WIND_CYCLE_MS : 0;
       const winds = WIND_LINES.map((line) => {
-        const along = 1.15 + 0.35 * ((drift + line.phase) % 1);
-        const length = (0.35 + 0.45 * gust) * line.length;
+        const travelled = (drift + line.phase) % 1;
+        const along = WIND_START + WIND_TRAVEL * travelled;
+        const length = (0.16 + 0.24 * gust) * line.length * (1 - 0.5 * travelled);
         const [ax, ay, bx, by] = rising
           ? [line.offset, along, line.offset, along + length]
           : [-along, line.offset, -along - length, line.offset];
-        return `M${(cx + ax * BODY_RADIUS).toFixed(2)} ${(cy + ay * BODY_RADIUS).toFixed(2)}L${(cx + bx * BODY_RADIUS).toFixed(2)} ${(cy + by * BODY_RADIUS).toFixed(2)}`;
+        return {
+          d: `M${(cx + ax * BODY_RADIUS).toFixed(2)} ${(cy + ay * BODY_RADIUS).toFixed(2)}L${(cx + bx * BODY_RADIUS).toFixed(2)} ${(cy + by * BODY_RADIUS).toFixed(2)}`,
+          opacity: (1 - travelled) * (0.35 + 0.65 * Math.sin(Math.PI * Math.min(1, travelled * 4))),
+        };
       });
       const inkX = INK_LEFT + INK_WIDTH * f.ink;
       const inkY = INK_BASE - INK_WAVE * Math.sin((Math.PI * (inkX - INK_LEFT)) / INK_STEP);
       const quillShown = Math.max(0, Math.min(1, (quilled - 0.2) / 0.5));
       const quillTransform = `translate(${cx.toFixed(2)} ${cy.toFixed(2)}) scale(${BODY_RADIUS.toFixed(3)}) translate(${inkX.toFixed(3)} ${inkY.toFixed(3)}) rotate(${QUILL_LEAN}) scale(${(QUILL_SIZE * (0.7 + 0.3 * quillShown)).toFixed(3)})`;
-      const drawn = `${bodyTransform}|${bodyOpacity.toFixed(3)}|${gust.toFixed(3)}|${winds.join("")}|${quillShown.toFixed(3)}|${quillTransform}|${f.ink.toFixed(3)}|${sides.map((s) => `${s.cy.toFixed(2)},${s.r.toFixed(2)},${s.opacity.toFixed(2)}`).join("|")}|${placed.map((q) => q.pill + q.d + q.opacity.toFixed(2)).join("|")}|${f.smile.toFixed(3)}`;
+      const drawn = `${bodyTransform}|${bodyOpacity.toFixed(3)}|${gust.toFixed(3)}|${winds.map((w) => w.d + w.opacity.toFixed(2)).join("")}|${quillShown.toFixed(3)}|${quillTransform}|${f.ink.toFixed(3)}|${sides.map((s) => `${s.cy.toFixed(2)},${s.r.toFixed(2)},${s.opacity.toFixed(2)}`).join("|")}|${placed.map((q) => q.pill + q.d + q.opacity.toFixed(2)).join("|")}|${f.smile.toFixed(3)}`;
       if (drawn !== e.drawn) {
         e.drawn = drawn;
         if (bodyGroup.current) {
@@ -279,8 +279,11 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
           else bodyGroup.current.removeAttribute("transform");
           bodyGroup.current.style.opacity = bodyOpacity < 1 ? bodyOpacity.toFixed(3) : "";
         }
-        if (windGroup.current) windGroup.current.style.opacity = gust > 0.01 ? (0.55 * gust).toFixed(3) : "0";
-        winds.forEach((d, i) => windLines[i].current?.setAttribute("d", d));
+        if (windGroup.current) windGroup.current.style.opacity = gust > 0.01 ? (0.9 * gust).toFixed(3) : "0";
+        winds.forEach((w, i) => {
+          windLines[i].current?.setAttribute("d", w.d);
+          windLines[i].current?.setAttribute("stroke-opacity", w.opacity.toFixed(3));
+        });
         if (quillGroup.current) {
           quillGroup.current.setAttribute("transform", quillTransform);
           quillGroup.current.style.opacity = quillShown > 0 ? quillShown.toFixed(3) : "0";
@@ -314,7 +317,7 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
 
       const step = p.sizePx <= 24 ? 1000 / 30 : FULL_FRAME_MS;
       if (target.moving || !settled || e.blinkStart !== null) return now + step;
-      return alive ? Math.min(e.nextBlink, e.nextStir) : Infinity;
+      return alive ? e.nextBlink : Infinity;
     };
 
     engine.current.last = 0;
@@ -413,7 +416,7 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       {[0, 1].map((i) => (
         <circle key={i} ref={sideDots[i]} r={0} fill={fill} style={{ opacity: 0 }} />
       ))}
-      <g ref={windGroup} style={{ opacity: 0 }} stroke={fill} strokeWidth={0.13 * BODY_RADIUS} strokeLinecap="round" fill="none">
+      <g ref={windGroup} style={{ opacity: 0 }} stroke={fill} strokeWidth={0.09 * BODY_RADIUS} strokeLinecap="round" fill="none">
         {windLines.map((line, i) => <path key={i} ref={line} />)}
       </g>
       <path
