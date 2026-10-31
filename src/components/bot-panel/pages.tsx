@@ -14,6 +14,7 @@ import { ServiceIcon } from "../PluginsPanel";
 import { RoutineEditor } from "../RoutinesPage";
 import { useWorkingFolder } from "../bot-settings/AccessSection";
 import { useBotEditor } from "../bot-settings/BotEditorContext";
+import { SkillEditor, useSkillEditor } from "../bot-settings/SkillEditor";
 import { SkillReviewDialog, useManagedSkills, type ManagedSkill } from "../bot-settings/SkillsSection";
 import { useBotApps, type BotApp } from "../bot-settings/useBotApps";
 import type { useBotSettingsDerived } from "../bot-settings/useBotSettingsDerived";
@@ -207,11 +208,6 @@ export function MemoryPage({ bot }: PageContext) {
   );
 }
 
-/** A bot's own skill, edited in place; library and computer-wide skills are changed where they live. */
-function editableSkill(skill: ManagedSkill): boolean {
-  return skill.origin !== "library" && skill.origin !== "imported" && !skill.source.startsWith("learn");
-}
-
 export function SkillsPage({ bot }: PageContext) {
   const { request: api } = useBotEditor();
   const { state, dispatch } = useStore();
@@ -219,32 +215,7 @@ export function SkillsPage({ bot }: PageContext) {
   const [source, setSource] = useState("");
   const [importing, setImporting] = useState(false);
   const libraryOn = skillsLibraryEnabled(state.config);
-  const [editing, setEditing] = useState<{ name: string; text: string } | null>(null);
-
-  const startEdit = async (skill: ManagedSkill) => {
-    if (skills.working) return;
-    skills.setError("");
-    try {
-      const { text } = (await api(`/api/bots/${bot.id}/skills/${encodeURIComponent(skill.name)}`)) as { text: string };
-      setEditing({ name: skill.name, text });
-    } catch (cause) {
-      skills.setError(errorText(cause, t("botPanel.skills.editFailed")));
-    }
-  };
-  const saveEdit = async () => {
-    if (!editing || skills.working) return;
-    skills.setWorking(editing.name);
-    skills.setError("");
-    try {
-      await api(`/api/bots/${bot.id}/skills/${encodeURIComponent(editing.name)}`, { method: "PUT", body: JSON.stringify({ text: editing.text }) });
-      setEditing(null);
-      await skills.refresh();
-    } catch (cause) {
-      skills.setError(errorText(cause, t("botPanel.skills.editFailed")));
-    } finally {
-      skills.setWorking("");
-    }
-  };
+  const editor = useSkillEditor({ botId: bot.id, api, refresh: () => skills.refresh(), working: skills.working, setWorking: skills.setWorking, setError: skills.setError });
 
   const remove = async (skill: ManagedSkill) => {
     if (skills.working) return;
@@ -306,31 +277,22 @@ export function SkillsPage({ bot }: PageContext) {
             disabled={Boolean(skills.working)}
             onChange={() => void skills.toggle(skill)}
             extra={<>
-              {editableSkill(skill) && <EditButton data-panel-action={`edit-skill:${skill.name}`} label={t("botPanel.skills.edit", { name: skill.name })} disabled={Boolean(skills.working)} onClick={() => void startEdit(skill)} />}
+              <EditButton data-panel-action={`edit-skill:${skill.name}`} label={t("botPanel.skills.edit", { name: skill.name })} disabled={Boolean(skills.working)} onClick={() => void editor.start(skill)} />
               <TrashButton data-panel-action={`remove-skill:${skill.name}`} label={t("botPanel.skills.remove", { name: skill.name })} disabled={Boolean(skills.working)} onClick={() => void remove(skill)} />
             </>}
           />
         ))}
         {skills.error && !skills.reviewing && <NoteRow tone="warn">{skills.error}</NoteRow>}
       </Card>
-      {editing && (
+      {editor.editing && (
         <Card>
-          <div className="flex flex-col gap-2 px-3.5 py-3" data-panel-form="skill-edit">
-            <div className="text-[13.5px] font-medium text-ink">{t("botPanel.skills.editing", { name: editing.name })}</div>
-            <div className="text-[12.5px] leading-[1.35] text-ink-secondary">{t("botPanel.skills.editHint")}</div>
-            <textarea
-              aria-label={t("botPanel.skills.editing", { name: editing.name })}
-              value={editing.text}
-              onChange={(event) => setEditing({ ...editing, text: event.target.value })}
-              spellCheck={false}
-              rows={16}
-              className="w-full resize-y rounded-lg border border-hairline/40 bg-inset px-3 py-2 font-mono text-[12.5px] leading-[1.45] text-ink focus:outline-none"
-            />
-            <div className="flex justify-end gap-2">
-              <button type="button" className={buttonCls} disabled={Boolean(skills.working)} onClick={() => setEditing(null)}>{t("common.cancel")}</button>
-              <button type="button" data-panel-action="save-skill" className={buttonCls} disabled={Boolean(skills.working) || !editing.text.trim()} onClick={() => void saveEdit()}>{t("common.save")}</button>
-            </div>
-          </div>
+          <SkillEditor
+            editing={editor.editing}
+            working={Boolean(skills.working)}
+            onChange={(text) => editor.setEditing({ ...editor.editing!, text })}
+            onCancel={() => editor.setEditing(null)}
+            onSave={() => void editor.save()}
+          />
         </Card>
       )}
       <Card>
