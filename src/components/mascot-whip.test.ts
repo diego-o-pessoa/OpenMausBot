@@ -58,4 +58,17 @@ describe("the whip", () => {
     expect(seen.filter((gesture) => gesture === "whip").length).toBeLessThanOrEqual(1);
     expect(stagedFace("whip", WHIP_HITS[0].at + 15).whip).toBe(WHIP_HITS[0].at + 15);
   });
+
+  it("plays to the end even when the work switches between tools under it", () => {
+    const at = REPERTOIRE.looking.indexOf("whip");
+    const director = new MascotDirector(() => (at + 0.5) / REPERTOIRE.looking.length);
+    director.setActivity("looking", 0, IDLE_FACE);
+    expect(director.current).toBe("whip");
+    // a busy agent flips between thinking and a tool every few hundred ms
+    for (let t = 300; t < WHIP_MS - 100; t += 300) {
+      director.setActivity(t % 600 ? "thinking" : "command", t, director.frame(t)!);
+      expect(director.current).toBe("whip");
+    }
+    for (const hit of WHIP_HITS) expect(director.frame(hit.at + 15)!.whip).toBe(hit.at + 15);
+  });
 });
