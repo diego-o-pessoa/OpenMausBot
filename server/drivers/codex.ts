@@ -1319,8 +1319,9 @@ export const CodexDriver: ProviderDriver<CodexConfig> = {
                 output: toolDetailPreview(item.type === "commandExecution" ? { output: item.aggregatedOutput, exitCode: item.exitCode } : item.type === "mcpToolCall" ? item.error ?? item.result : item.type === "fileChange" ? item.changes : item.action),
               });
               if (item.type === "mcpToolCall") {
+                const tool = [item.server, item.tool].filter((part) => typeof part === "string" && part).join("__");
                 for (const img of extractMcpImages(item.result)) {
-                  emit({ ...base(threadId, turnId), type: "item.completed", itemType: "assistant_image", data: img.data });
+                  emit({ ...base(threadId, turnId), type: "item.completed", itemType: "assistant_image", data: img.data, tool });
                 }
               }
             } else if (item.type === "reasoning") {

@@ -596,6 +596,7 @@ import { createUpdateCheckRoutes, serverUpdateChecker } from "./routes/update-ch
 import { createBrowserSiteRoutes } from "./routes/browser-sites.ts";
 import { createInternalSignInRoutes } from "./routes/sign-in.ts";
 import { createInternalThreadRoutes } from "./routes/internal-threads.ts";
+import { isScreenCaptureTool } from "./mcp-tool-images.ts";
 import { createBrowserEvidenceRoutes } from "./routes/browser-evidence.ts";
 import { createSignInCardRoutes } from "./routes/sign-in-cards.ts";
 import { createInternalEscalateRoutes } from "./routes/internal-escalate.ts";
@@ -824,7 +825,9 @@ function speakerNote(sender: ResolvedSender | undefined, profileName: string | u
 
 function messageSender(auth: RequestAuth): ResolvedSender | undefined {
   if (auth.kind !== "session") return auth.person ? { name: auth.person } : undefined;
-  const name = (auth.person ?? auth.session.email ?? auth.session.label ?? "").trim();
+  // The pairing label names the device ("Chrome on Windows"), never the person: without a name given on this
+  // computer, the person is the one named in Settings.
+  const name = (auth.person ?? auth.session.email ?? cfg.profile?.name ?? "").trim();
   return name ? { name, id: actorKey(auth) } : undefined;
 }
 
@@ -6921,6 +6924,8 @@ bus.subscribe((event: RuntimeEvent) => {
       if (event.itemType === "assistant_text") {
         pushAssistantText(event.text, event.turnId);
       } else if (event.itemType === "assistant_image") {
+        // A screenshot the agent took to see a screen or page is not posted with its reply.
+        if (event.tool !== undefined && isScreenCaptureTool(event.tool)) break;
         try {
           const decoded = decodeGeneratedImage(event.data);
           const saved = saveImage(decoded.bytes, decoded.mime);

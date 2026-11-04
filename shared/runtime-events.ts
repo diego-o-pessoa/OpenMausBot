@@ -111,7 +111,7 @@ export type RuntimeEvent = RuntimeEventBase &
     | { type: "item.completed"; itemType: "assistant_text"; text: string }
     /** Provider-generated raster bytes, folded into the private attachment
      * store and never forwarded to renderer SSE. */
-    | { type: "item.completed"; itemType: "assistant_image"; data: string; alt?: string }
+    | { type: "item.completed"; itemType: "assistant_image"; data: string; alt?: string; /** Set when a tool result carried the image: that tool's name, "" when the driver could not tell. */ tool?: string }
     | { type: "content.delta"; streamKind: "assistant_text" | "reasoning_text"; delta: string }
     | {
         type: "request.opened";

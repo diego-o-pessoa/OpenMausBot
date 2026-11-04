@@ -80,6 +80,9 @@ export const CLAUDE_ACCOUNT_ENV_KEYS = [
   "CLAUDE_CODE_USE_FOUNDRY",
 ] as const;
 
+/** Tool names by tool_use id, so an image in a tool result can say which tool sent it. */
+const toolNamesById = new Map<string, string>();
+
 export function resolveClaudeConfigDir(configDir?: string, env: NodeJS.ProcessEnv = process.env): string {
   const home = env.HOME || env.USERPROFILE || homedir();
   const configured = configDir?.trim() || env.CLAUDE_CONFIG_DIR?.trim() || join(home, ".claude");
@@ -1592,6 +1595,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeConfig> = {
             }
             for (const b of Array.isArray(msg.content) ? msg.content : []) {
               if (b.type === "tool_use") {
+                if (typeof b.id === "string" && typeof b.name === "string") toolNamesById.set(b.id, b.name);
                 emit({
                   ...base(threadId, currentTurnId()),
                   type: "item.started",
@@ -1627,8 +1631,10 @@ export const ClaudeDriver: ProviderDriver<ClaudeConfig> = {
             for (const b of Array.isArray(o.message?.content) ? o.message.content : []) {
               if (b.type === "tool_result") {
                 emit({ ...base(threadId, currentTurnId()), type: "item.completed", itemType: "tool", itemId: b.tool_use_id, ok: !b.is_error, output: toolDetailPreview(b.content) });
+                const tool = toolNamesById.get(b.tool_use_id) ?? "";
+                toolNamesById.delete(b.tool_use_id);
                 for (const img of extractMcpImages(b.content)) {
-                  emit({ ...base(threadId, currentTurnId()), type: "item.completed", itemType: "assistant_image", data: img.data });
+                  emit({ ...base(threadId, currentTurnId()), type: "item.completed", itemType: "assistant_image", data: img.data, tool });
                 }
               }
             }

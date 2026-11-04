@@ -1072,8 +1072,9 @@ export function createAcpDriver(support: AcpSupport): ProviderDriver<AcpConfig> 
                   ok: u.status !== "failed",
                   output: toolDetailPreview(u.rawOutput ?? u.content),
                 });
+                const tool = typeof u.title === "string" ? u.title : "";
                 for (const img of extractMcpImages(u.content ?? u.rawOutput)) {
-                  emit({ ...base(threadId, current.turnId), type: "item.completed", itemType: "assistant_image", data: img.data });
+                  emit({ ...base(threadId, current.turnId), type: "item.completed", itemType: "assistant_image", data: img.data, tool });
                 }
               }
               break;
