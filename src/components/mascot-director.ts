@@ -205,7 +205,7 @@ export class MascotDirector {
   }
 
   private cut(plan: Act[], now: number, shown: Face): void {
-    if (this.act?.kind === "quill") {
+    if (this.act?.kind === "quill" || this.act?.kind === "whip") {
       this.queue = plan;
       return;
     }
