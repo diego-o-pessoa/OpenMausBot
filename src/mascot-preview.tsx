@@ -4,7 +4,7 @@ import { BotAvatar } from "@/components/Avatar";
 import { SphereMascot, type SphereMascotHandle } from "@/components/SphereMascot";
 import { ThinkingDots, PresenceMascot } from "@/components/ThinkingDots";
 import { MASCOT_CLIPS, type MascotClipName } from "@/components/mascot-clips";
-import { QUILL_MS, SPIN_MS, stagedFace } from "@/components/mascot-director";
+import { QUILL_MS, WHIP_MS, SPIN_MS, stagedFace } from "@/components/mascot-director";
 import { TRACK_STEP_MS } from "@/components/mascot-tracks";
 import { DOTS_FACE, FRONT_FACE, IDLE_FACE, STILL_WORKING_FACE, dotBeat, faceFromSample, lookToward, type Face, type MascotActivity } from "@/components/sphere-mascot";
 import { GROK_BODY_IDS, MAUS_COLOR_NAMES, MAUS_COLORS, type MausColor } from "@/lib/mascot";
@@ -153,10 +153,10 @@ function Gallery() {
   );
 }
 
-/** `?strip=spinUp|spinRight|quill`: the gesture's frames side by side. */
+/** `?strip=spinUp|spinRight|quill|whip`: the gesture's frames side by side. */
 function Strip() {
-  const gesture = (new URLSearchParams(location.search).get("strip") ?? "spinUp") as "spinUp" | "spinRight" | "quill";
-  const ms = gesture === "quill" ? QUILL_MS : SPIN_MS;
+  const gesture = (new URLSearchParams(location.search).get("strip") ?? "spinUp") as "spinUp" | "spinRight" | "quill" | "whip";
+  const ms = gesture === "quill" ? QUILL_MS : gesture === "whip" ? WHIP_MS : SPIN_MS;
   const frames = Array.from({ length: 12 }, (_, i) => (i * ms) / 11);
   return (
     <div style={{ display: "flex", flexWrap: "wrap", background: "#f0f0f0", width: 6 * 150 }}>
@@ -170,10 +170,10 @@ function Strip() {
   );
 }
 
-/** `?live=spinUp|spinRight|quill`: the gesture played over and over, for screen recordings. */
+/** `?live=spinUp|spinRight|quill|whip`: the gesture played over and over, for screen recordings. */
 function Live() {
-  const gesture = (new URLSearchParams(location.search).get("live") ?? "spinUp") as "spinUp" | "spinRight" | "quill";
-  const ms = (gesture === "quill" ? QUILL_MS : SPIN_MS) + 500;
+  const gesture = (new URLSearchParams(location.search).get("live") ?? "spinUp") as "spinUp" | "spinRight" | "quill" | "whip";
+  const ms = (gesture === "quill" ? QUILL_MS : gesture === "whip" ? WHIP_MS : SPIN_MS) + 500;
   const [t, setT] = useState(0);
   useEffect(() => {
     let frame = requestAnimationFrame(function tick(now) {

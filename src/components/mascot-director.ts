@@ -11,17 +11,18 @@ import {
   type Face,
   type MascotActivity,
 } from "./sphere-mascot";
+import { WHIP_MS, whipPose } from "./mascot-whip";
 
 type Spin = "spinUp" | "spinRight";
-type Gesture = MascotClipName | "dots" | Spin | "quill";
+type Gesture = MascotClipName | "dots" | Spin | "quill" | "whip";
 
 /** Which of Grok's measured gestures fit each kind of work. */
 export const REPERTOIRE: Readonly<Record<Exclude<MascotActivity, "idle">, readonly Gesture[]>> = {
   thinking: ["dots", "downScanA", "downScanB", "downScanC", "ovalPonder", "shrinkPeek", "glanceLeft", "peekLeft", "spinUp"],
   reading: ["downScanA", "downScanB", "downScanC", "glanceLeft", "peekLeft", "ovalPonder"],
-  command: ["attentive", "glanceUp", "frontBlink", "glanceUpAgain", "glanceUpLater", "squintGlance", "spinUp", "spinRight"],
+  command: ["attentive", "glanceUp", "frontBlink", "glanceUpAgain", "glanceUpLater", "squintGlance", "whip", "spinUp", "spinRight"],
   writing: ["frontBlink", "attentive", "downScanA", "squintGlance"],
-  looking: ["lookUpRight", "glanceUpLeft", "glanceUp", "squintGlance", "glanceLeft", "spinRight"],
+  looking: ["lookUpRight", "glanceUpLeft", "glanceUp", "squintGlance", "glanceLeft", "whip", "spinRight"],
 };
 
 type Act =
@@ -31,7 +32,8 @@ type Act =
   | { kind: "unfold" }
   | { kind: "hold"; face: Face; ms: number }
   | { kind: "spin"; name: Spin }
-  | { kind: "quill" };
+  | { kind: "quill" }
+  | { kind: "whip" };
 
 const FADE_MS = 250;
 const FOLD_EYES_MS = 300;
@@ -49,6 +51,9 @@ const QUILL_OUT_MS = 420;
 export const QUILL_MS = QUILL_IN_MS + QUILL_WRITE_MS + QUILL_OUT_MS;
 /** One quill per stretch of writing: edits in a row within this get the other writing gestures. */
 export const QUILL_REST_MS = 20_000;
+/** The whip is a joke: once in a while, never twice within this. */
+export const WHIP_REST_MS = 45_000;
+export { WHIP_MS };
 
 const ease = (t: number) => {
   const k = Math.max(0, Math.min(1, t));
@@ -76,6 +81,8 @@ function actMs(act: Act): number {
       return SPIN_MS;
     case "quill":
       return QUILL_MS;
+    case "whip":
+      return WHIP_MS;
     default:
       return act.ms;
   }
@@ -112,6 +119,8 @@ export class MascotDirector {
   private recent: Gesture[] = [];
   private inFinale = false;
   private quillAt = -Infinity;
+  private whipAt = -Infinity;
+  private now = 0;
 
   constructor(private readonly random: () => number = Math.random) {}
 
@@ -122,6 +131,7 @@ export class MascotDirector {
   }
 
   setActivity(next: MascotActivity, now: number, shown: Face): void {
+    this.now = now;
     if (next === this.activity) return;
     const was = this.activity;
     this.activity = next;
@@ -145,6 +155,7 @@ export class MascotDirector {
 
   /** The face to draw at `now`, or null when there is nothing to perform. */
   frame(now: number): Face | null {
+    this.now = now;
     if (!this.act) {
       if (this.activity === "idle") return null;
       this.begin(this.pick(this.activity), now, this.last);
@@ -173,7 +184,8 @@ export class MascotDirector {
   }
 
   private pick(activity: Exclude<MascotActivity, "idle">): Act[] {
-    return this.planOf(this.choose(REPERTOIRE[activity]));
+    const rested = this.now - this.whipAt >= WHIP_REST_MS;
+    return this.planOf(this.choose(REPERTOIRE[activity].filter((gesture) => gesture !== "whip" || rested)));
   }
 
   private choose(repertoire: readonly Gesture[]): Gesture {
@@ -188,6 +200,7 @@ export class MascotDirector {
     if (gesture === "dots") return [{ kind: "fold" }, { kind: "dots", ms: DOTS_GESTURE_MS }, { kind: "unfold" }];
     if (gesture === "spinUp" || gesture === "spinRight") return [{ kind: "spin", name: gesture }];
     if (gesture === "quill") return [{ kind: "quill" }];
+    if (gesture === "whip") return [{ kind: "whip" }];
     return [{ kind: "clip", name: gesture, ...CLIP_WINDOWS[gesture] }];
   }
 
@@ -216,6 +229,7 @@ export class MascotDirector {
 
   private enter(act: Act, now: number, from: Face): void {
     this.act = act;
+    if (act.kind === "whip") this.whipAt = now;
     this.start = now;
     this.from = from;
     if (act.kind === "fold") this.dotsSince = now + FOLD_MS;
@@ -239,6 +253,8 @@ export class MascotDirector {
         return spinFace(this.from, act.name, elapsed);
       case "quill":
         return quillFace(this.from, elapsed);
+      case "whip":
+        return whipFace(this.from, elapsed);
       case "fold":
         if (elapsed < FOLD_EYES_MS) return mixFace(this.from, DOTS_FACE, ease(elapsed / FOLD_EYES_MS));
         return { ...DOTS_FACE, dots: ease((elapsed - FOLD_EYES_MS) / (FOLD_MS - FOLD_EYES_MS)), beat: [0, 1, 0] };
@@ -277,8 +293,28 @@ function spinFace(from: Face, name: Spin, elapsed: number): Face {
 }
 
 /** A gesture the director stages itself, `elapsed` ms in, starting from the front face: for previews and tests. */
-export function stagedFace(gesture: Spin | "quill", elapsed: number): Face {
+export function stagedFace(gesture: Spin | "quill" | "whip", elapsed: number): Face {
+  if (gesture === "whip") return whipFace(FRONT_FACE, elapsed);
   return gesture === "quill" ? quillFace(FRONT_FACE, elapsed) : spinFace(FRONT_FACE, gesture, elapsed);
+}
+
+/** Three cracks of a whip, each squashing the body its own way; dizzy for a moment, then itself again. */
+function whipFace(from: Face, elapsed: number): Face {
+  const front = mixFace(from, FRONT_FACE, ease(elapsed / FADE_MS));
+  const pose = whipPose(elapsed);
+  return {
+    ...front,
+    stretchX: front.stretchX * pose.stretchX,
+    stretchY: front.stretchY * pose.stretchY,
+    x: front.x + pose.x,
+    // squashed from above it stays on the ground: the centre sinks by what the height lost
+    y: front.y - (1 - pose.stretchY),
+    tilt: pose.tilt,
+    skew: pose.skew,
+    hurt: pose.hurt,
+    dizzy: pose.dizzy,
+    whip: elapsed,
+  };
 }
 
 /** The body narrows into a quill, writes a line, and swells back into itself. */

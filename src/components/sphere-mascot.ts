@@ -61,6 +61,14 @@ export interface Face {
   quill: number;
   /** How much of its line the quill has written, 0 to 1. */
   ink: number;
+  /** The body's lean and shear, in degrees (the whip's squashes). */
+  tilt: number;
+  skew: number;
+  /** How far the eyes have become "> <" (hurt) or spirals (dizzy), 0 to 1. */
+  hurt: number;
+  dizzy: number;
+  /** How far into the whip gesture, in ms; -1 when no whip is out. Never blended: it jumps to the target's. */
+  whip: number;
 }
 
 const eye = (x: number, y: number, length: number, width: number, angle: number): Eye => ({ x, y, length, width, angle });
@@ -80,6 +88,11 @@ const still = (left: Eye, right: Eye): Face => ({
   wind: 0,
   quill: 0,
   ink: 0,
+  tilt: 0,
+  skew: 0,
+  hurt: 0,
+  dizzy: 0,
+  whip: -1,
 });
 
 export const IDLE_FACE: Face = still(eye(0.108, 0.325, 0.576, 0.283, 55), eye(0.571, 0.532, 0.567, 0.185, 52));
@@ -110,6 +123,11 @@ export function faceFromSample(sample: TrackSample): Face {
     wind: 0,
     quill: 0,
     ink: 0,
+    tilt: 0,
+    skew: 0,
+    hurt: 0,
+    dizzy: 0,
+    whip: -1,
   };
 }
 
@@ -157,6 +175,11 @@ export function mixFace(a: Face, b: Face, t: number): Face {
     wind: mix(a.wind, b.wind, k),
     quill: mix(a.quill, b.quill, k),
     ink: mix(a.ink, b.ink, k),
+    tilt: mix(a.tilt, b.tilt, k),
+    skew: mix(a.skew, b.skew, k),
+    hurt: mix(a.hurt, b.hurt, k),
+    dizzy: mix(a.dizzy, b.dizzy, k),
+    whip: b.whip,
   };
 }
 
@@ -174,6 +197,11 @@ export function faceDistance(a: Face, b: Face): number {
     Math.abs(a.wind - b.wind),
     Math.abs(a.quill - b.quill),
     Math.abs(a.ink - b.ink),
+    Math.abs(a.tilt - b.tilt) / 90,
+    Math.abs(a.skew - b.skew) / 90,
+    Math.abs(a.hurt - b.hurt),
+    Math.abs(a.dizzy - b.dizzy),
+    a.whip === b.whip ? 0 : 1,
     ...a.beat.map((v, i) => Math.abs(v - b.beat[i])),
   );
   for (const i of [0, 1]) {

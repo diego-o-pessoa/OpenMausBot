@@ -6,6 +6,7 @@ import { mascotClock, type MascotTicket } from "./mascot-clock";
 import { leaseDirector, type MascotDirector } from "./mascot-director";
 import { FULL_FRAME_MS, VIEW_SPAN } from "./mascot-motion";
 import { PRESS_TRACK } from "./mascot-tracks";
+import { DIZZY_EYE, HURT_EYES, whipDrawing } from "./mascot-whip";
 import {
   BLINK_MS,
   DOT_SPACING,
@@ -61,6 +62,10 @@ const INK_BASE = 0.82;
 const INK_WAVE = 0.09;
 const INK_STEP = 0.21;
 const INK_STEPS = 60;
+const WHIP_LASH = "#3b2412";
+const WHIP_SPARK = "#ffb703";
+const WHIP_FLASH = "#fff6c9";
+const WHIP_STAR = "#ffc21a";
 
 /** The written line up to `x`: a wave, one hump every INK_STEP. */
 function inkPath(x: number): string {
@@ -110,6 +115,14 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
   const windLines = [useRef<SVGPathElement | null>(null), useRef<SVGPathElement | null>(null), useRef<SVGPathElement | null>(null)];
   const quillGroup = useRef<SVGGElement | null>(null);
   const inkLine = useRef<SVGPathElement | null>(null);
+  const hurtEyes = useRef<SVGPathElement | null>(null);
+  const dizzyEyes = [useRef<SVGPathElement | null>(null), useRef<SVGPathElement | null>(null)];
+  const whipGroup = useRef<SVGGElement | null>(null);
+  const whipLash = useRef<SVGPathElement | null>(null);
+  const whipRing = useRef<SVGCircleElement | null>(null);
+  const whipFlash = useRef<SVGPathElement | null>(null);
+  const whipSparks = useRef<SVGPathElement | null>(null);
+  const whipStars = useRef<SVGPathElement | null>(null);
   const ticket = useRef<MascotTicket | null>(null);
   const sizePx = typeof size === "number" ? size : 160;
   const centre: [number, number] = [silhouette.anchor.x + CIRCLE_ANCHOR_OFFSET[0], silhouette.anchor.y + CIRCLE_ANCHOR_OFFSET[1]];
@@ -202,7 +215,7 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       if (alive) {
         if (!e.nextBlink) e.nextBlink = now + between(BLINK_GAP_MS);
         if (now >= e.nextBlink) {
-          if (e.blinkStart === null && e.face.quill < 0.01 && e.face.dots < 0.01) e.blinkStart = now;
+          if (e.blinkStart === null && e.face.quill < 0.01 && e.face.dots < 0.01 && e.face.whip < 0) e.blinkStart = now;
           e.nextBlink = now + between(BLINK_GAP_MS);
         }
       }
@@ -226,12 +239,14 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       const sy = f.scale * f.stretchY * shrink * (1 + 0.12 * quilled);
       const ox = f.x * BODY_RADIUS;
       const oy = -(f.y + middle.lift * f.dots) * BODY_RADIUS;
+      const bent = Math.abs(f.tilt) > 0.05 || Math.abs(f.skew) > 0.05 ? ` rotate(${f.tilt.toFixed(2)}) skewX(${f.skew.toFixed(2)})` : "";
       const bodyTransform =
-        Math.abs(sx - 1) < 1e-4 && Math.abs(sy - 1) < 1e-4 && Math.abs(ox) < 0.01 && Math.abs(oy) < 0.01
+        Math.abs(sx - 1) < 1e-4 && Math.abs(sy - 1) < 1e-4 && Math.abs(ox) < 0.01 && Math.abs(oy) < 0.01 && !bent
           ? ""
-          : `translate(${(cx + ox).toFixed(2)} ${(cy + oy).toFixed(2)}) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(${(-cx).toFixed(2)} ${(-cy).toFixed(2)})`;
+          : `translate(${(cx + ox).toFixed(2)} ${(cy + oy).toFixed(2)})${bent} scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(${(-cx).toFixed(2)} ${(-cy).toFixed(2)})`;
       const bodyOpacity = (1 + (middle.opacity - 1) * f.dots) * Math.max(0, 1 - 1.6 * quilled);
-      const eyesShown = Math.max(0, 1 - f.dots * 2.5) * Math.max(0, 1 - 2 * quilled);
+      const reacting = Math.max(0, Math.min(1, Math.max(f.hurt, f.dizzy)));
+      const eyesShown = Math.max(0, 1 - f.dots * 2.5) * Math.max(0, 1 - 2 * quilled) * (1 - reacting);
       const sidesShown = Math.max(0, Math.min(1, (f.dots - 0.55) / 0.3));
       const sides = [f.beat[0], f.beat[2]].map((lit, i) => {
         const pose = dotPose(lit);
@@ -272,7 +287,10 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
       const inkY = INK_BASE - INK_WAVE * Math.sin((Math.PI * (inkX - INK_LEFT)) / INK_STEP);
       const quillShown = Math.max(0, Math.min(1, (quilled - 0.2) / 0.5));
       const quillTransform = `translate(${cx.toFixed(2)} ${cy.toFixed(2)}) scale(${BODY_RADIUS.toFixed(3)}) translate(${inkX.toFixed(3)} ${inkY.toFixed(3)}) rotate(${QUILL_LEAN}) scale(${(QUILL_SIZE * (0.7 + 0.3 * quillShown)).toFixed(3)})`;
-      const drawn = `${bodyTransform}|${bodyOpacity.toFixed(3)}|${gust.toFixed(3)}|${winds.map((w) => w.d + w.opacity.toFixed(2)).join("")}|${quillShown.toFixed(3)}|${quillTransform}|${f.ink.toFixed(3)}|${sides.map((s) => `${s.cy.toFixed(2)},${s.r.toFixed(2)},${s.opacity.toFixed(2)}`).join("|")}|${placed.map((q) => q.pill + q.d + q.opacity.toFixed(2)).join("|")}|${f.smile.toFixed(3)}`;
+      const whipping = f.whip >= 0 ? whipDrawing(f.whip) : null;
+      const spin = (now / 1000) * 720;
+      const whipKey = whipping ? `${whipping.lash}|${whipping.ring?.r ?? ""}|${whipping.flash?.opacity ?? ""}|${whipping.sparks?.d ?? ""}|${whipping.stars}` : "";
+      const drawn = `${bodyTransform}|${f.hurt.toFixed(3)}|${f.dizzy.toFixed(3)}|${f.dizzy > 0 ? spin.toFixed(0) : ""}|${whipKey}|${bodyOpacity.toFixed(3)}|${gust.toFixed(3)}|${winds.map((w) => w.d + w.opacity.toFixed(2)).join("")}|${quillShown.toFixed(3)}|${quillTransform}|${f.ink.toFixed(3)}|${sides.map((s) => `${s.cy.toFixed(2)},${s.r.toFixed(2)},${s.opacity.toFixed(2)}`).join("|")}|${placed.map((q) => q.pill + q.d + q.opacity.toFixed(2)).join("|")}|${f.smile.toFixed(3)}`;
       if (drawn !== e.drawn) {
         e.drawn = drawn;
         if (bodyGroup.current) {
@@ -285,6 +303,32 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
           windLines[i].current?.setAttribute("d", w.d);
           windLines[i].current?.setAttribute("stroke-opacity", w.opacity.toFixed(3));
         });
+        if (hurtEyes.current) hurtEyes.current.style.opacity = f.hurt > 0.01 ? f.hurt.toFixed(3) : "0";
+        dizzyEyes.forEach((ref, i) => {
+          const el = ref.current;
+          if (!el) return;
+          el.style.opacity = f.dizzy > 0.01 ? f.dizzy.toFixed(3) : "0";
+          el.setAttribute("transform", `translate(${(cx + (i ? 0.3 : -0.3) * BODY_RADIUS).toFixed(2)} ${cy.toFixed(2)}) scale(${BODY_RADIUS.toFixed(3)}) rotate(${spin.toFixed(1)})`);
+        });
+        if (whipGroup.current) whipGroup.current.style.opacity = whipping ? "1" : "0";
+        whipLash.current?.setAttribute("d", whipping?.lash ?? "");
+        const ring = whipping?.ring;
+        if (whipRing.current) {
+          whipRing.current.setAttribute("cx", ring ? ring.cx.toFixed(3) : "0");
+          whipRing.current.setAttribute("cy", ring ? ring.cy.toFixed(3) : "0");
+          whipRing.current.setAttribute("r", ring ? ring.r.toFixed(3) : "0");
+          whipRing.current.setAttribute("stroke-width", ring ? ring.width.toFixed(3) : "0");
+          whipRing.current.style.opacity = ring ? ring.opacity.toFixed(3) : "0";
+        }
+        if (whipFlash.current) {
+          whipFlash.current.setAttribute("d", whipping?.flash?.d ?? "");
+          whipFlash.current.style.opacity = whipping?.flash ? whipping.flash.opacity.toFixed(3) : "0";
+        }
+        if (whipSparks.current) {
+          whipSparks.current.setAttribute("d", whipping?.sparks?.d ?? "");
+          whipSparks.current.style.opacity = whipping?.sparks ? whipping.sparks.opacity.toFixed(3) : "0";
+        }
+        whipStars.current?.setAttribute("d", whipping?.stars ?? "");
         if (quillGroup.current) {
           quillGroup.current.setAttribute("transform", quillTransform);
           quillGroup.current.style.opacity = quillShown > 0 ? quillShown.toFixed(3) : "0";
@@ -412,7 +456,28 @@ export const SphereMascot = React.forwardRef<SphereMascotHandle, SphereMascotPro
               />
             </React.Fragment>
           ))}
+          <path
+            ref={hurtEyes}
+            d={HURT_EYES}
+            transform={`translate(${centre[0]} ${centre[1]}) scale(${BODY_RADIUS})`}
+            fill="none"
+            stroke={eyeColor}
+            strokeWidth={0.1}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ opacity: 0 }}
+          />
+          {dizzyEyes.map((ref, i) => (
+            <path key={i} ref={ref} d={DIZZY_EYE} fill="none" stroke={eyeColor} strokeWidth={0.05} strokeLinecap="round" style={{ opacity: 0 }} />
+          ))}
         </g>
+      </g>
+      <g ref={whipGroup} transform={`translate(${centre[0]} ${centre[1]}) scale(${BODY_RADIUS})`} style={{ opacity: 0 }}>
+        <path ref={whipLash} fill={WHIP_LASH} />
+        <circle ref={whipRing} r={0} fill="none" stroke="#ffffff" style={{ opacity: 0 }} />
+        <path ref={whipFlash} fill={WHIP_FLASH} stroke={WHIP_SPARK} strokeWidth={0.03} strokeLinejoin="round" style={{ opacity: 0 }} />
+        <path ref={whipSparks} fill="none" stroke={WHIP_SPARK} strokeWidth={0.045} strokeLinecap="round" style={{ opacity: 0 }} />
+        <path ref={whipStars} fill={WHIP_STAR} />
       </g>
       {[0, 1].map((i) => (
         <circle key={i} ref={sideDots[i]} r={0} fill={fill} style={{ opacity: 0 }} />
