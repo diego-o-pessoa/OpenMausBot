@@ -35,3 +35,11 @@ export function extractMcpImages(value: unknown): McpImageContent[] {
       : null;
   return arr ? arr.map(asImageBlock).filter((v): v is McpImageContent => v !== null) : [];
 }
+
+// A tool that returns what the screen or page looks like is the agent looking, not something made for the person:
+// the agent still sees it, but it is never posted in the chat. A tool the driver could not name counts as one.
+const SCREEN_TOOL = /screen|computer|browser|desktop|playwright|puppeteer|\bcua\b|cua_|snapshot|capture|page|tab|window|vnc/i;
+
+export function isScreenCaptureTool(name: string): boolean {
+  return !name.trim() || SCREEN_TOOL.test(name);
+}
