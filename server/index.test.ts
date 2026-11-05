@@ -1557,7 +1557,7 @@ describe("harness HTTP API", () => {
     });
   });
 
-  it("attributes a paired person's message to them, and leaves the owner's own sends unstamped", async () => {
+  it("does not name a paired session after its device: without a name, it writes as the owner", async () => {
     const created = await api("POST", "/api/bots", {
       name: "Attribution",
       modelSelection: { instanceId: "claude", model: "claude-sonnet-5" },
@@ -1572,11 +1572,14 @@ describe("harness HTTP API", () => {
 
     const theirs = await person.call("POST", `/api/bots/${bot.id}/messages`, { text: "from the paired person" });
     expect(theirs.status).toBe(202);
-    expect(theirs.body.message).toMatchObject({ role: "user", sender: { name: "Safari on Mac" } });
+    expect(theirs.body.message.role).toBe("user");
+    expect(theirs.body.message.sender).toBeUndefined(); // never "Safari on Mac": the pairing label names the device
 
     const steered = await person.call("POST", `/api/bots/${bot.id}/messages`, { text: "and one more" });
     expect(steered.status).toBe(202);
-    expect(steered.body.message).toMatchObject({ steered: true, sender: { name: "Safari on Mac" } });
+    // Steered into the running turn or queued behind it, depending on how far the fixture turn got.
+    expect(steered.body.message?.steered ?? steered.body.queued).toBe(true);
+    expect(steered.body.message?.sender).toBeUndefined();
 
     // A second bot, so this owner send cannot be folded into the turn above by a steer.
     const second = await api("POST", "/api/bots", {
@@ -1595,10 +1598,7 @@ describe("harness HTTP API", () => {
     const bots = (await api("GET", "/api/bots?messages=30")).body.bots;
     const theirMessages = bots.find((b: any) => b.id === bot.id)?.messages ?? [];
     const myMessages = bots.find((b: any) => b.id === second.body.bot.id)?.messages ?? [];
-    const personKey = theirMessages.find((m: any) => m.text === "from the paired person")?.sender?.id;
-    expect(personKey).toMatch(/^p_[\w-]{22}$/);
-    expect(theirMessages.find((m: any) => m.text === "from the paired person")?.sender).toEqual({ name: "Safari on Mac", id: personKey });
-    expect(theirMessages.find((m: any) => m.text === "and one more")?.sender).toEqual({ name: "Safari on Mac", id: personKey });
+    expect(theirMessages.find((m: any) => m.text === "from the paired person")?.sender).toBeUndefined();
     expect(myMessages.find((m: any) => m.text === "from the owner")?.sender).toBeUndefined();
     } finally {
       // Stop the fixture turns and remove the bots and session: anything left running fails a later test.
