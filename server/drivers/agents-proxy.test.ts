@@ -790,7 +790,7 @@ describe("agents-proxy MCP surface", () => {
     expect(create.inputSchema.properties.continuity).toMatchObject({ type: "boolean" });
     expect(create.inputSchema.properties.run_on_startup).toMatchObject({ type: "boolean" });
     expect(create.inputSchema.properties.clear_timeout.type).toBe("boolean");
-    expect(schedule.properties.every_minutes).toMatchObject({ minimum: 5, maximum: 1_440 });
+    expect(schedule.properties.every_minutes).toMatchObject({ minimum: 2, maximum: 1_440 });
     expect(schedule.properties.window_start.type).toBe("string");
     expect(schedule.properties.window_end.type).toBe("string");
     expect(schedule.properties.ends_at.type).toBe("string");

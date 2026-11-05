@@ -11,6 +11,7 @@ import { BOT_PROFILE_LIMITS, fitsOnOneLine } from "./bot-profile.ts";
 import { redactSecretsInText } from "./redact.ts";
 import { normalizeCronSchedule } from "./routine-schedule.ts";
 import { isSkillName, parseSkillMd, scanSkillText, SKILL_FILE_MAX_BYTES } from "./skill-md.ts";
+import { ROUTINE_MIN_INTERVAL_MINUTES } from "./routines.ts";
 
 export const PACKAGE_FORMAT = "openmaus.package";
 /** The newest version this module reads and writes. */
@@ -115,7 +116,7 @@ export const packageRoutineScheduleSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("interval"),
-    everyMinutes: z.number().int().min(5).max(1_440),
+    everyMinutes: z.number().int().min(ROUTINE_MIN_INTERVAL_MINUTES).max(1_440),
     anchorAt: z.number().int().nonnegative().max(MAX_DATE_MS),
     weekdays: intervalWeekdays.optional(),
     window: intervalWindow.optional(),

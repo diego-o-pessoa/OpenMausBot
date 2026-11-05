@@ -4,6 +4,7 @@ import { EFFORT_LEVELS } from "../shared/wire.ts";
 import { isModelVariant } from "./contracts.ts";
 import { normalizeCronSchedule } from "../shared/routine-schedule.ts";
 import { parseToolScope, type ToolScope } from "../shared/tool-scope.ts";
+import { ROUTINE_MIN_INTERVAL_MINUTES } from "../shared/routines.ts";
 
 const strings = (max: number, length: number) => z.array(z.string().max(length)).max(max);
 const clock = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);
@@ -50,7 +51,7 @@ const scheduleSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("once"), at: timestamp }).strict(),
   z.object({ type: z.literal("daily"), time: clock, weekdays }).strict(),
   z.object({
-    type: z.literal("interval"), everyMinutes: z.number().int().min(5).max(1440), anchorAt: timestamp,
+    type: z.literal("interval"), everyMinutes: z.number().int().min(ROUTINE_MIN_INTERVAL_MINUTES).max(1440), anchorAt: timestamp,
     weekdays: weekdays.nullable().optional(),
     window: z.object({ start: clock, end: clock }).strict().nullable().optional(),
     endsAt: timestamp.nullable().optional(),
