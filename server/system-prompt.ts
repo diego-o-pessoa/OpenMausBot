@@ -186,6 +186,14 @@ function syncedFoldersPrompt(synced: ReadonlyArray<{ computerName: string; pcPat
 export const COMPOSIO_PROMPT =
   " The user's connected apps (Gmail, Calendar, Slack, Notion, and the rest) are reachable through the composio tools — find the right one with COMPOSIO_SEARCH_TOOLS, read its arguments with COMPOSIO_GET_TOOL_SCHEMAS, then run it with COMPOSIO_MULTI_EXECUTE_TOOL. Reach for them before telling the user you have no access to a service.";
 
+/** Said when connected apps are not mounted, so the bot never waits on a connector card its engine would show elsewhere. */
+export function connectedAppsOffPrompt(switchedOffForBot: boolean): string {
+  const why = switchedOffForBot
+    ? "Connected apps are switched off for you in your Access settings; the person can switch them on there."
+    : "Connected apps are not set up on this OpenMausBot yet; the person can save a Composio project key in App Settings → Connections, or the server's owner can turn on the included service (OMB_MANAGED_CONNECTED_APPS=1).";
+  return `You cannot connect apps such as Microsoft Teams, Gmail, Slack or Google Drive right now. ${why} Do not use your engine's own connector, integration or app-install tools to connect one: their confirmation cards cannot appear in OpenMausBot, so such a request stays pending forever. Say plainly what is missing instead. Once connected apps are on, asking to connect an app shows its sign-in card in this chat.`;
+}
+
 export function composioSystemPrompt(grants: Record<string, ConnectorToolGrant> | undefined): string {
   if (grants === undefined) return COMPOSIO_PROMPT;
   const services = Object.keys(grants);

@@ -189,11 +189,12 @@ export function startCloudConnectedApps(options: CloudConnectedAppsOptions): Clo
 
 let cloudHome: CloudConnectedApps | null = null;
 /** A Cloud home's plan includes the connected-apps service, so it registers itself. The built server uses OpenMausBot's
- * service; from source (development, tests) only an explicit OMB_COMPOSIO_BROKER_URL registers anywhere. */
-export function startCloudHomeConnectedApps(input: { cloudHome: boolean; dataDir: string; apply: CloudConnectedAppsOptions["apply"]; cloudGrant?: string }): void {
-  if (!input.cloudHome || cloudHome) return;
+ * service; from source (development, tests) only an explicit OMB_COMPOSIO_BROKER_URL registers anywhere. A self-hosted
+ * server registers too when its owner opts in (OMB_MANAGED_CONNECTED_APPS=1), with the same default service. */
+export function startCloudHomeConnectedApps(input: { cloudHome: boolean; dataDir: string; apply: CloudConnectedAppsOptions["apply"]; cloudGrant?: string; selfHosted?: boolean }): void {
+  if ((!input.cloudHome && !input.selfHosted) || cloudHome) return;
   const configured = process.env.OMB_COMPOSIO_BROKER_URL;
-  const brokerUrl = managedComposioBrokerUrl(configured, !import.meta.url.endsWith(".ts"));
+  const brokerUrl = managedComposioBrokerUrl(configured, Boolean(input.selfHosted) || !import.meta.url.endsWith(".ts"));
   if (!brokerUrl) {
     if (configured?.trim()) console.warn("cloud home: connected-apps service URL rejected: HTTPS or a loopback HTTP URL is required");
     return;
