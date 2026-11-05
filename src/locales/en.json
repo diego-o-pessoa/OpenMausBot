@@ -4437,6 +4437,8 @@
   "connectors.card.openAgain": "Open again",
   "connectors.card.tryAgain": "Try again",
   "connectors.card.connectSecurely": "Connect securely",
+  "connectors.card.allowAndConnect": "Allow and connect",
+  "connectors.card.needsAccessHint": "This bot isn't allowed to use this app yet. Connecting also allows it.",
   "connectors.card.continueTask": "Continue task",
   "connectors.card.continuing": "Continuing",
   "connectors.disconnectConfirm": "Disconnect {identity} from {service}? Only this {service} account will be revoked. Your other {service} accounts will stay connected.",

@@ -739,6 +739,8 @@ export interface ConnectorCardData {
   resumeKey: string;
   /** Account alias supplied by the agent when adding a second account. */
   alias?: string;
+  /** The bot is not allowed this app yet: connecting from the card also grants it. */
+  needsAccess?: boolean;
   error?: string;
   dismissed?: boolean;
   resumed?: boolean;
