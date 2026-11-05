@@ -60,8 +60,31 @@ function requireOperator() {
 
 function ticketIdOf(args) {
   const id = String(args?.ticket_id ?? "").trim();
-  if (!id || id.length > 250) throw new TicketError("ticket_id is required: the ticket's id from tomticket_list_tickets or tomticket_get_ticket.");
+  if (!id || id.length > 250) throw new TicketError("ticket_id is required: the ticket's internal id or its protocol number, from tomticket_list_tickets or tomticket_get_ticket.");
   return id;
+}
+
+// The protocol is the public number a customer sees (e.g. 32461); the API's ticket_id is the long internal id
+// (e.g. 8b57...). Protocols are short decimals, internal ids are 32-hex, so a short all-digits value is a protocol.
+async function findIdByProtocol(protocol) {
+  for (let page = 1; page <= 20; page++) {
+    const body = await call("GET", "/ticket/list", { page });
+    for (const ticket of Array.isArray(body.data) ? body.data : []) {
+      if (String(ticket.protocol ?? "").trim() === protocol) return String(ticket.id);
+    }
+    if (!body.next_page) break;
+  }
+  return null;
+}
+
+async function resolveTicketId(args) {
+  const value = ticketIdOf(args);
+  if (/^\d{1,10}$/.test(value)) {
+    const id = await findIdByProtocol(value);
+    if (id) return id;
+    throw new TicketError(`No ticket with protocol ${value} was found in the recent list. Use tomticket_list_tickets to find the ticket and its internal id.`);
+  }
+  return value;
 }
 
 export function checkedMessage(raw) {
@@ -122,8 +145,8 @@ const TOOLS = [
   },
   {
     name: "tomticket_get_ticket",
-    description: "Read one ticket: subject, customer (name, email and organization when the account has them), linked attendant (and whether it is the configured one), status, the opening message and every reply marked from \"atendente\" or \"cliente\". Read it before answering so you do not repeat a question.",
-    inputSchema: { type: "object", additionalProperties: false, properties: { ticket_id: { type: "string" } }, required: ["ticket_id"] },
+    description: "Read one ticket: subject, customer (name, email and organization when the account has them), linked attendant (and whether it is the configured one), status, the opening message and every reply marked from \"atendente\" or \"cliente\". Read it before answering so you do not repeat a question. ticket_id accepts either the internal id or the public protocol number.",
+    inputSchema: { type: "object", additionalProperties: false, properties: { ticket_id: { type: "string", description: "The ticket's internal id or its protocol number (the public number, e.g. 32461)." } }, required: ["ticket_id"] },
   },
   {
     name: "tomticket_link_attendant",
@@ -163,14 +186,14 @@ async function runTool(name, args) {
     }));
     return { tickets, page: args?.page ?? 1, pages: body.pages };
   }
-  if (name === "tomticket_get_ticket") return ticketView(await ticketDetail(ticketIdOf(args)));
+  if (name === "tomticket_get_ticket") return ticketView(await ticketDetail(await resolveTicketId(args)));
   if (name === "tomticket_link_attendant") {
-    const ticketId = ticketIdOf(args);
+    const ticketId = await resolveTicketId(args);
     const { ticket, linkedNow } = await ensureOperatorLinked(ticketId);
     return { ok: true, ticket_id: ticketId, attendant: ticket.operator?.name ?? OPERATOR_NAME, linkedNow };
   }
   if (name === "tomticket_reply") {
-    const ticketId = ticketIdOf(args);
+    const ticketId = await resolveTicketId(args);
     const message = checkedMessage(args?.message);
     const { ticket, linkedNow } = await ensureOperatorLinked(ticketId);
     const lastFromAttendant = [...replies(ticket)].reverse().find((reply) => reply?.sender_type === "A");
@@ -188,7 +211,7 @@ async function runTool(name, args) {
     return { ok: true, ticket_id: ticketId, reply_id: sent.id ?? posted?.id, from: "atendente", sender: posted?.sender, attendant: after.operator?.name, linkedNow };
   }
   if (name === "tomticket_finish") {
-    const ticketId = ticketIdOf(args);
+    const ticketId = await resolveTicketId(args);
     const message = checkedMessage(args?.message);
     await ensureOperatorLinked(ticketId);
     await call("POST", "/ticket/finish", {

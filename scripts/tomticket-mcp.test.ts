@@ -38,6 +38,7 @@ beforeEach(async () => {
     const fields = req.method === "POST" ? await form(req) : {};
     if (fields.message !== undefined) fields.message = fields.message.replace(/\r\n/g, "\n");
     calls.push(`${req.method} ${path}${fields.message !== undefined ? ` ${JSON.stringify(fields.message)}` : ""}`);
+    if (path === "/ticket/list") return json({ error: false, next_page: false, data: [{ id: ticket.id, protocol: "32461", subject: "Impressora", customer: { name: "Kayky" } }] });
     if (path === "/ticket/detail") return json({ error: false, data: ticket });
     if (path === "/ticket/operator/link") {
       if (linkSticks) ticket.operator = { id: fields.operator_id, name: "Diego Pessoa" };
@@ -133,6 +134,19 @@ it("reports a reply that reads back as the customer's", async () => {
   const sent = await tool("tomticket_reply", { ticket_id: "t1", message: "Olá Kayky!" });
   expect(sent.error).toBe(true);
   expect(sent.text).toMatch(/cliente/);
+});
+
+it("resolves a protocol number to the internal id before reading the ticket", async () => {
+  const read = JSON.parse((await tool("tomticket_get_ticket", { ticket_id: "32461" })).text);
+  expect(read).toMatchObject({ id: "t1", replies: [{ from: "cliente", sender: "Kayky" }] });
+  expect(calls).toEqual(["GET /ticket/list", "GET /ticket/detail"]);
+});
+
+it("replies to a ticket given by its protocol number", async () => {
+  const sent = await tool("tomticket_reply", { ticket_id: "32461", message: "Olá Kayky!" });
+  expect(sent.error, sent.text).toBe(false);
+  expect(calls[0]).toBe("GET /ticket/list");
+  expect(calls.some((entry) => entry.startsWith("POST /ticket/reply/operator"))).toBe(true);
 });
 
 it("reads a ticket with each reply marked atendente or cliente and whether the attendant is the configured one", async () => {
