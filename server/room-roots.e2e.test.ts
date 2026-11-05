@@ -520,6 +520,16 @@ it("R7 does not rerun a cut goal step after a restart: its run ended with the re
   expect(nothingLive(f)).toEqual([]);
 }), hostTimeout(90_000));
 
+it("R8b answers a teammate's @mention back to the lead, even after the lead already spoke", () => scenario(async (f) => {
+  const mira = await f.bot("Mira", "Engineering");
+  const room = await f.room("Engineering", [f.clive.id, mira.id], { kind: "member", botId: f.clive.id });
+  f.script(f.clive.id, { key: "C0", match: ["R8B-JOB"], reply: "R8B-CLIVE: @Mira please check the stock." });
+  f.script(mira.id, { key: "M1", match: ["R8B-CLIVE"], reply: "R8B-MIRA: @Clive should I include the returns?" });
+  f.script(f.clive.id, { key: "C2", match: ["R8B-MIRA"], reply: "R8B-CLIVE2: yes, include them." });
+  await f.post(room, "R8B-JOB: how much stock do we have?");
+  await f.final(room.threadId, "R8B-CLIVE2");
+  expect(f.turns().map((record: any) => record.planKey)).toEqual(["C0", "M1", "C2"]);
+}), hostTimeout(60_000));
 it("R8 runs a chained @mention as a root of its own, with the hop recorded", () => scenario(async (f) => {
   const mira = await f.bot("Mira", "Engineering");
   const room = await f.room("Engineering", [f.clive.id, mira.id], { kind: "member", botId: f.clive.id });

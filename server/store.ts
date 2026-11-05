@@ -395,6 +395,11 @@ export function normalizeGroupDefaultResponder(
   return { kind: "member", botId: memberIds[0] };
 }
 
+/** True when a sentence of `text` that @mentions `peer` is a question to them ("@Augusto, include returns?"). */
+export function askedBack(text: string, peer: { name: string }): boolean {
+  return text.split(/(?<=[.!?\n])/).some((sentence) => sentence.trim().endsWith("?") && mentionedBots(sentence, [peer]).length > 0);
+}
+
 export function roomResponders<T extends { id: string; name: string; hidden?: boolean }>(
   text: string,
   members: T[],

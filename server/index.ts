@@ -303,6 +303,7 @@ import { decideRoomPost, emptyRoomPostBudget, type RoomPostAttempt, type RoomPos
 import { pageSize, slimMessage } from "./host/message-pages.ts";
 import { ReplayBuffer } from "./host/sse-replay.ts";
 import {
+  askedBack,
   mentionedBots,
   roomResponders,
   sectionKey,
@@ -10152,7 +10153,8 @@ roomHandoffTimer.unref();
 function reconcileParkedRoots(): void {
   for (const node of coordinator.active()) reconcileParkedNode(node);
 }
-const MAX_GROUP_HOPS = 1;
+/** How many teammate-to-teammate @mentions one room message can chain (question, answer, follow-up...); the cap is what stops two bots looping. */
+const MAX_GROUP_HOPS = 6;
 
 type GroupMemberTurnOutcome =
   | "settled"
@@ -11174,7 +11176,9 @@ async function runClaimedGroupMemberTurn(
     }
     for (const next of roomResponders(replyText, members, { kind: "mentions" })) {
       if (isCancelled?.()) return false;
-      if (spoken.has(next.id)) continue;
+      // A member who already spoke is summoned again only when a teammate asks them something back; a mention in
+      // a quote or in passing does not bring them in twice.
+      if (spoken.has(next.id) && (hop === 0 || !askedBack(replyText, next))) continue;
       if (operation) {
         const verdict = await waitForChatRoomMember(operation, threadId, next);
         if (verdict === "stop") return false;
