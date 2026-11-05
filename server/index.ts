@@ -638,6 +638,7 @@ import { createThreadRoutes } from "./routes/threads.ts";
 import { createWebhookRoutes } from "./routes/webhooks.ts";
 import { withScopeHint } from "./connector-scope-hint.ts";
 import { connectorRequestItems } from "./connector-request-items.ts";
+import { botAllowsConnector, connectorAccessGrant } from "./connector-access-grant.ts";
 import { personAsks as personAskAt } from "./thread-presence.ts";
 
 const PORT = Number(process.env.OMB_PORT || process.env.OGB_PORT || 8799);
@@ -15847,16 +15848,7 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
         if (!composio.configured(cfg) || owner.bot.composio === false) {
           return json(res, 409, { error: "connected apps are not enabled for this bot" });
         }
-        if (owner.bot.connectorScopes) {
-          const outside = slugs.find((slug) => !owner.bot.connectorScopes?.apps[slug]);
-          if (outside) {
-            appendDecision(DATA_DIR, {
-              threadId, botId: owner.bot.id, botName: owner.bot.name,
-              tool: "COMPOSIO_MANAGE_CONNECTIONS", summary: outside, decision: "auto-denied", source: "connector-scope", rule: `scope:${outside}:app`,
-            });
-            return json(res, 403, { error: `${owner.bot.name} has not been given access to ${outside}; allow it under the bot's Access settings first` });
-          }
-        }
+        const outsideScope = new Set(slugs.filter((slug) => !botAllowsConnector(owner.bot, slug)));
         await composio.useRequestedAuthConfigs(cfg, items);
         const connectionState: Record<string, { connected?: boolean }> = await composio.connectionStatus(cfg, slugs).catch(() => ({}));
         requireActiveInternalCapability();
@@ -15889,6 +15881,7 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
               status,
               resumeKey,
               ...(item.alias ? { alias: item.alias } : {}),
+              ...(outsideScope.has(item.slug) ? { needsAccess: true } : {}),
             },
           });
           messageIds.push(message.id);
@@ -16577,7 +16570,12 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
       const connector = message.connector;
       if (m[3] === "authorize" && method === "POST") {
         const alias = composio.normalizeAccountAlias(typeof body.alias === "string" ? body.alias : undefined) ?? connector.alias;
-        store.patchMessage(threadId, message.id, { connector: { ...connector, alias, status: "authorizing", error: undefined, dismissed: false } });
+        if (connector.needsAccess) {
+          const bot = store.bot(m[1]);
+          if (!bot) return json(res, 404, { error: "no such bot" });
+          store.patchBot(bot.id, connectorAccessGrant(bot, connector.slug));
+        }
+        store.patchMessage(threadId, message.id, { connector: { ...connector, alias, needsAccess: undefined, status: "authorizing", error: undefined, dismissed: false } });
         try {
           return json(res, 200, await composio.authorizeService(cfg, connector.slug, alias));
         } catch (error) {

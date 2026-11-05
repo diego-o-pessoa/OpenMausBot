@@ -182,12 +182,14 @@ export function ConnectorCard({ botId, threadId, message }: { botId: string; thr
               ? t("connectors.card.openAgain")
               : connector.status === "failed"
                 ? t("connectors.card.tryAgain")
-                : t("connectors.card.connectSecurely")}
+                : connector.needsAccess
+                  ? t("connectors.card.allowAndConnect")
+                  : t("connectors.card.connectSecurely")}
           </button>
         </>
       }
     >
-      <p className="text-[11.5px] text-ink-tertiary">{t("connectors.card.signInHint")}</p>
+      <p className="text-[11.5px] text-ink-tertiary">{t(connector.needsAccess ? "connectors.card.needsAccessHint" : "connectors.card.signInHint")}</p>
       {labelNeeded ? (
         <form
           className="mt-1.5"
