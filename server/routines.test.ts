@@ -1167,8 +1167,8 @@ describe("RoutineManager", () => {
       name: "Too frequent",
       prompt: "Check too often",
       botId: "maus-1",
-      schedule: { type: "interval", everyMinutes: 4, anchorAt },
-    })).toThrow(/5 to 1440/);
+      schedule: { type: "interval", everyMinutes: 1, anchorAt },
+    })).toThrow(/2 to 1440/);
     for (const invalidAnchor of [1.5, Number.MAX_SAFE_INTEGER, Number.NaN]) {
       expect(() => h.manager.create({
         name: "Bad anchor",

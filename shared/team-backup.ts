@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { CONNECTOR_SLUG_PATTERN, CONNECTOR_TOOL_NAME_PATTERN } from "./wire.ts";
 import { parseToolScope, type ToolScope } from "./tool-scope.ts";
+import { ROUTINE_MIN_INTERVAL_MINUTES } from "./routines.ts";
 
 export const MAX_TEAM_BACKUP_BYTES = 50 * 1024 * 1024;
 export const TEAM_BACKUP_CONTENTS = "Bot profiles, instructions, sections, rooms, playbooks, routines, each bot's memory (MEMORY.md, topic notes and daily logs) and conversation text (all tasks and branches).";
@@ -52,7 +53,7 @@ const playbook = z.object({
 const schedule = z.discriminatedUnion("type", [
   z.object({ type: z.literal("once"), at: timestamp }),
   z.object({ type: z.literal("daily"), time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), weekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7) }),
-  z.object({ type: z.literal("interval"), everyMinutes: z.number().int().min(5).max(1440), anchorAt: z.number().int().min(0).max(8_640_000_000_000_000) }),
+  z.object({ type: z.literal("interval"), everyMinutes: z.number().int().min(ROUTINE_MIN_INTERVAL_MINUTES).max(1440), anchorAt: z.number().int().min(0).max(8_640_000_000_000_000) }),
 ]);
 // A bot's memory travels with it, in the same plain markdown it lives in:
 // the person's accumulated corrections are part of who the bot is. The

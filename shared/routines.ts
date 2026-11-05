@@ -3,6 +3,9 @@
 import type { LimitResetSchedule, LimitResetScheduleInput } from "./limit-reset.ts";
 import type { RoutineCronSchedule } from "./routine-schedule.ts";
 
+/** Shortest gap an interval routine may have. */
+export const ROUTINE_MIN_INTERVAL_MINUTES = 2;
+
 export interface RoutineIntervalWindow {
   start: string;
   end: string;

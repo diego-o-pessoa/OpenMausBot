@@ -1412,9 +1412,9 @@
               },
               "every_minutes": {
                 "type": "integer",
-                "minimum": 5,
+                "minimum": 2,
                 "maximum": 1440,
-                "description": "Only for type interval: whole minutes between runs, from 5 to 1440."
+                "description": "Only for type interval: whole minutes between runs, from 2 to 1440."
               },
               "starts_at": {
                 "type": "string",
@@ -1650,9 +1650,9 @@
                   },
                   "every_minutes": {
                     "type": "integer",
-                    "minimum": 5,
+                    "minimum": 2,
                     "maximum": 1440,
-                    "description": "Only for type interval: whole minutes between runs, from 5 to 1440."
+                    "description": "Only for type interval: whole minutes between runs, from 2 to 1440."
                   },
                   "starts_at": {
                     "type": "string",

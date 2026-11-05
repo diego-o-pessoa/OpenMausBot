@@ -5,6 +5,7 @@ import { normalizeCronSchedule } from "../../shared/routine-schedule.ts";
 import type { ToolCallContext, ToolCallResult } from "./agents-call.ts";
 import { WEEKDAYS } from "./agents-catalog.ts";
 import type { Json } from "./agents-client.ts";
+import { ROUTINE_MIN_INTERVAL_MINUTES } from "../../shared/routines.ts";
 
 export const TRIGGER_TOOL_NAMES: ReadonlySet<string> = new Set(["list_triggers", "list_trigger_events", "create_trigger", "manage_trigger"]);
 
@@ -122,8 +123,8 @@ function normalizeScheduleInput(args: Json): NormalizedSchedule {
     }
     const rawMinutes = raw.every_minutes ?? raw.everyMinutes;
     const everyMinutes = Number(rawMinutes);
-    if (!Number.isInteger(everyMinutes) || everyMinutes < 5 || everyMinutes > 1_440) {
-      return { error: 'An interval schedule needs "every_minutes": a whole number from 5 to 1440.' };
+    if (!Number.isInteger(everyMinutes) || everyMinutes < ROUTINE_MIN_INTERVAL_MINUTES || everyMinutes > 1_440) {
+      return { error: `An interval schedule needs "every_minutes": a whole number from ${ROUTINE_MIN_INTERVAL_MINUTES} to 1440.` };
     }
     const rawStart = raw.starts_at ?? raw.anchorAt;
     if (rawStart !== undefined && (typeof rawStart !== "string" || !rawStart.trim())) {

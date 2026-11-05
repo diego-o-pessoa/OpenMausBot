@@ -92,9 +92,10 @@ const HOUR_HEIGHT = 64;
 const DAY_CHIP_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 const WEEKDAYS = [1, 2, 3, 4, 5];
-const INTERVAL_PRESETS = [5, 10, 15, 30, 60];
+const INTERVAL_PRESETS = [2, 5, 10, 15, 30, 60];
 const EVENT_DURATION_OPTIONS = Array.from({ length: 240 / CALENDAR_SLOT_MINUTES }, (_, index) => (index + 1) * CALENDAR_SLOT_MINUTES);
 import { BOT_DRAG_TYPE, EVENT_DRAG_TYPE, LimitResetMarker, type ResetDrop } from "./routines/LimitResetMarkers";
+import { ROUTINE_MIN_INTERVAL_MINUTES } from "../../shared/routines";
 
 export type EventKind = "routine" | "call";
 export type RoutinesLayout = "day" | "week" | "list";
@@ -387,7 +388,7 @@ export function EventEditor({
   const selectedBots = botIds.flatMap((id) => bots.find((bot) => bot.id === id) ?? []);
   const dialogRef = useRef<HTMLDivElement>(null);
   const intervalInvalid = recurrence === "interval"
-    && (!Number.isInteger(intervalMinutes) || intervalMinutes < 5 || intervalMinutes > 1_440);
+    && (!Number.isInteger(intervalMinutes) || intervalMinutes < ROUTINE_MIN_INTERVAL_MINUTES || intervalMinutes > 1_440);
   const intervalDaysInvalid = recurrence === "interval" && intervalDays === "custom" && intervalWeekdays.length === 0;
   const intervalWindowMinutes = fromLocalDateAndTime("2000-01-01", intervalWindowEnd)
     - fromLocalDateAndTime("2000-01-01", intervalWindowStart);
@@ -402,7 +403,7 @@ export function EventEditor({
     : undefined;
   const intervalEndMinimumAt = nextIntervalForSave(
     editorOpenedAt,
-    Math.max(5, intervalMinutes || 5),
+    Math.max(ROUTINE_MIN_INTERVAL_MINUTES, intervalMinutes || ROUTINE_MIN_INTERVAL_MINUTES),
     existingIntervalSchedule,
   );
   const intervalEndsAt = intervalEnd === "on-date" ? endOfLocalDate(intervalEndDate) : null;
@@ -655,7 +656,7 @@ export function EventEditor({
                     {!INTERVAL_PRESETS.includes(intervalMinutes) && (
                       <input
                         type="number"
-                        min={5}
+                        min={ROUTINE_MIN_INTERVAL_MINUTES}
                         max={1_440}
                         step={1}
                         value={intervalMinutes || ""}
@@ -761,7 +762,7 @@ export function EventEditor({
                   )}
 
                   {intervalInvalid && (
-                    <div id="routine-interval-error" className="text-[11px] text-danger">Choose a whole number from 5 to 1,440 minutes.</div>
+                    <div id="routine-interval-error" className="text-[11px] text-danger">Choose a whole number from {ROUTINE_MIN_INTERVAL_MINUTES} to 1,440 minutes.</div>
                   )}
                   {intervalDaysInvalid && (
                     <div id="routine-interval-days-error" className="text-[11px] text-danger">Choose at least one day.</div>

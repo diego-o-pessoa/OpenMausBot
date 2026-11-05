@@ -4,6 +4,7 @@ import { OPTIONS_CARD_LIMITS, WATCHER_OPTIONS_CARD_BOT_ID } from "../../shared/o
 import { agentToolAnnotations } from "../agent-tool-policy.ts";
 import { CHAT_CARD_TOOL_DEFINITIONS } from "./agents-chat-card-tools.ts";
 import { RESEARCH_TOOL_DEFINITIONS, RESEARCH_TOOL_NAMES } from "./agents-research-tools.ts";
+import { ROUTINE_MIN_INTERVAL_MINUTES } from "../../shared/routines.ts";
 
 /** Which tools a turn is shown. Presentation only: the server still authenticates and scopes every call. */
 export interface CatalogProfile {
@@ -87,9 +88,9 @@ const ROUTINE_SCHEDULE_SCHEMA = {
     },
     every_minutes: {
       type: "integer",
-      minimum: 5,
+      minimum: ROUTINE_MIN_INTERVAL_MINUTES,
       maximum: 1_440,
-      description: "Only for type interval: whole minutes between runs, from 5 to 1440.",
+      description: `Only for type interval: whole minutes between runs, from ${ROUTINE_MIN_INTERVAL_MINUTES} to 1440.`,
     },
     starts_at: {
       type: "string",

@@ -35,6 +35,7 @@ import type {
   RoutineRequestSnapshot,
   RoutineRequestUndo,
 } from "../shared/routine-request.ts";
+import { ROUTINE_MIN_INTERVAL_MINUTES } from "../shared/routines.ts";
 
 const WEEKDAY_NUMBER = {
   sunday: 0,
@@ -296,8 +297,8 @@ function normalizeSchedule(schedule: RoutineToolScheduleInput, now: number, ownE
     return { type: "once", at };
   }
   if (schedule.type === "interval") {
-    if (!Number.isInteger(schedule.everyMinutes) || schedule.everyMinutes < 5 || schedule.everyMinutes > 1_440) {
-      throw new RoutineRequestError("everyMinutes must be a whole number from 5 to 1440");
+    if (!Number.isInteger(schedule.everyMinutes) || schedule.everyMinutes < ROUTINE_MIN_INTERVAL_MINUTES || schedule.everyMinutes > 1_440) {
+      throw new RoutineRequestError(`everyMinutes must be a whole number from ${ROUTINE_MIN_INTERVAL_MINUTES} to 1440`);
     }
     let anchorAt: number | undefined;
     if (schedule.anchorAt !== undefined) {

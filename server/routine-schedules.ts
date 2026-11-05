@@ -3,6 +3,7 @@ import { AFTER_RESET_MS, type LimitResetSchedule, type LimitResetScheduleInput }
 import { normalizeCronSchedule, nextCronRuns, type RoutineCronSchedule } from "../shared/routine-schedule.ts";
 import type { RoutineIntervalWindow } from "../shared/routines.ts";
 import { clockMinutes, INTERVAL_RESTRICTION_SEARCH_MS, intervalAllowsOccurrence, intervalHasRestrictions, MAX_DATE_MS, nextAlignedInterval, nextRandomIntervalRun } from "./routine-intervals.ts";
+import { ROUTINE_MIN_INTERVAL_MINUTES } from "../shared/routines.ts";
 
 export interface RoutineIntervalSchedule {
   type: "interval";
@@ -135,8 +136,8 @@ function parseSchedule(schedule: RoutineScheduleInput, after: number): RoutineSc
   }
   if (schedule?.type === "interval") {
     const { everyMinutes, anchorAt } = schedule;
-    if (typeof everyMinutes !== "number" || !Number.isInteger(everyMinutes) || everyMinutes < 5 || everyMinutes > 1_440) {
-      throw new Error("Interval must be a whole number from 5 to 1440 minutes");
+    if (typeof everyMinutes !== "number" || !Number.isInteger(everyMinutes) || everyMinutes < ROUTINE_MIN_INTERVAL_MINUTES || everyMinutes > 1_440) {
+      throw new Error(`Interval must be a whole number from ${ROUTINE_MIN_INTERVAL_MINUTES} to 1440 minutes`);
     }
     if (
       typeof anchorAt !== "number" ||

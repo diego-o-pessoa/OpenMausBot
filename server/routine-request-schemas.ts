@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { normalizeCronSchedule } from "../shared/routine-schedule.ts";
 import type { JsonValue } from "./schema.ts";
+import { ROUTINE_MIN_INTERVAL_MINUTES } from "../shared/routines.ts";
 
 export const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 export const ROUTINE_ID = /^[A-Za-z0-9_-]{1,128}$/;
@@ -108,7 +109,7 @@ export const storedScheduleSchema = z.discriminatedUnion("type", [
   }).strict(),
   z.object({
     type: z.literal("interval"),
-    everyMinutes: z.number().int().min(5).max(1_440),
+    everyMinutes: z.number().int().min(ROUTINE_MIN_INTERVAL_MINUTES).max(1_440),
     anchorAt: z.number().int().nonnegative().max(MAX_DATE_MS).optional(),
     weekdays: storedWeekdaysSchema.optional(),
     window: storedIntervalWindowSchema.optional(),
@@ -143,7 +144,7 @@ export const storedScheduleChangesSchema = z.discriminatedUnion("type", [
   }).strict(),
   z.object({
     type: z.literal("interval"),
-    everyMinutes: z.number().int().min(5).max(1_440),
+    everyMinutes: z.number().int().min(ROUTINE_MIN_INTERVAL_MINUTES).max(1_440),
     anchorAt: z.number().int().nonnegative().max(MAX_DATE_MS).optional(),
     weekdays: storedWeekdaysSchema.nullable().optional(),
     window: storedIntervalWindowSchema.nullable().optional(),

@@ -871,8 +871,8 @@ describe("RoutineRequestService", () => {
     await expect(service.propose({
       botId: "bot-a",
       threadId: "thread-c",
-      proposal: createProposal({ schedule: { type: "interval", everyMinutes: 4 } }),
-    })).rejects.toThrow(/5 to 1440/);
+      proposal: createProposal({ schedule: { type: "interval", everyMinutes: 1 } }),
+    })).rejects.toThrow(/2 to 1440/);
     await expect(service.propose({
       botId: "bot-a",
       threadId: "thread-c",
