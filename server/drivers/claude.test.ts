@@ -23,6 +23,7 @@ import {
   permissionSocketPath,
   readClaudeAuthSettings,
   claudeCostSnapshot,
+  CLAUDE_APP_ONLY_TOOLS,
   restoredCostBase,
   STEERED_CONTINUATION_GRACE_MS,
   sumNativeTurnResults,
@@ -455,7 +456,7 @@ describe("ClaudeDriver turns (fake CLI)", () => {
     await recorder.until((event) => event.type === "turn.completed");
     const seen = JSON.parse(readFileSync(dump, "utf8"));
     expect(seen.argv).toContain("--restricted");
-    expect(seen.argv[seen.argv.indexOf("--disallowedTools") + 1]).toBe("Write");
+    expect(seen.argv[seen.argv.indexOf("--disallowedTools") + 1]).toBe(["Write", ...CLAUDE_APP_ONLY_TOOLS].join(","));
     expect(seen.mcpConfig.mcpServers).not.toHaveProperty("browser");
     expect(JSON.parse(seen.mcpConfig.mcpServers.agents.env.OMB_GATE_TOOL_SCOPE)).toEqual({ allow: ["native:*", "mcp:agents:list_bots"] });
   });
@@ -2066,7 +2067,7 @@ describe("ClaudeDriver turns (fake CLI)", () => {
 
     const seen = JSON.parse(readFileSync(dump, "utf8"));
     expect(seen.argv[seen.argv.indexOf("--tools") + 1]).toBe("Read,WebFetch");
-    expect(seen.argv[seen.argv.indexOf("--disallowedTools") + 1]).toBe("Bash(git *),Edit");
+    expect(seen.argv[seen.argv.indexOf("--disallowedTools") + 1]).toBe(["Bash(git *)", "Edit", ...CLAUDE_APP_ONLY_TOOLS].join(","));
   });
 
   it("passes an explicit empty available set to disable every Claude built-in", async () => {
@@ -2079,7 +2080,7 @@ describe("ClaudeDriver turns (fake CLI)", () => {
 
     const seen = JSON.parse(readFileSync(dump, "utf8"));
     expect(seen.argv[seen.argv.indexOf("--tools") + 1]).toBe("");
-    expect(seen.argv).not.toContain("--disallowedTools");
+    expect(seen.argv[seen.argv.indexOf("--disallowedTools") + 1]).toBe(CLAUDE_APP_ONLY_TOOLS.join(","));
   });
 
   it("mounts the dweb proxy from the drivers directory and pre-allows its tools", async () => {
@@ -4063,4 +4064,10 @@ describe("ClaudeDriver billing (fake CLI)", () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-inherited");
     expect(await billed("claude", {})).toEqual(LOGIN);
   });
+});
+
+
+it("keeps the Claude-app-only connector, plugin and skill tools out of every turn", async () => {
+  expect(CLAUDE_APP_ONLY_TOOLS).toContain("SuggestConnectors");
+  expect(CLAUDE_APP_ONLY_TOOLS).toContain("SearchMcpRegistry");
 });

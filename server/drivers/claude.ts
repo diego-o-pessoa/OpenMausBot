@@ -83,6 +83,14 @@ export const CLAUDE_ACCOUNT_ENV_KEYS = [
 /** Tool names by tool_use id, so an image in a tool result can say which tool sent it. */
 const toolNamesById = new Map<string, string>();
 
+/** Claude Code tools whose confirmation card only the Claude apps can show: run headless here, a request through one
+ * waits on a card that never appears ("user_confirmed: false"). Connections go through OpenMausBot's own tools. */
+export const CLAUDE_APP_ONLY_TOOLS = [
+  "SuggestConnectors", "SearchMcpRegistry", "ListConnectors",
+  "SuggestPluginInstall", "SearchPlugins", "ListPlugins",
+  "SuggestSkills", "SearchSkills", "ListSkills",
+] as const;
+
 export function resolveClaudeConfigDir(configDir?: string, env: NodeJS.ProcessEnv = process.env): string {
   const home = env.HOME || env.USERPROFILE || homedir();
   const configured = configDir?.trim() || env.CLAUDE_CONFIG_DIR?.trim() || join(home, ".claude");
@@ -1086,9 +1094,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeConfig> = {
       }
       if (turn.guestConfined) args.push("--restricted", "--tools", GUEST_CLAUDE_TOOLS.join(","));
       else if (config.tools !== undefined) args.push("--tools", config.tools.join(","));
-      if (config.disallowedTools?.length) {
-        args.push("--disallowedTools", config.disallowedTools.join(","));
-      }
+      args.push("--disallowedTools", [...new Set([...(config.disallowedTools ?? []), ...CLAUDE_APP_ONLY_TOOLS])].join(","));
       const turnEnvironment = environment();
       await ensureCliVersion(turnEnvironment);
       if (turn.guestConfined && !claudeCliSupports(cliVersion, "--restricted")) {

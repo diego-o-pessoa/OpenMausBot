@@ -194,14 +194,16 @@ export function connectedAppsOffPrompt(switchedOffForBot: boolean): string {
   return `You cannot connect apps such as Microsoft Teams, Gmail, Slack or Google Drive right now. ${why} Do not use your engine's own connector, integration or app-install tools to connect one: their confirmation cards cannot appear in OpenMausBot, so such a request stays pending forever. Say plainly what is missing instead. Once connected apps are on, asking to connect an app shows its sign-in card in this chat.`;
 }
 
+const CONNECT_WITH_OMB = " To connect a new app, call COMPOSIO_MANAGE_CONNECTIONS: it shows its sign-in card in this chat. Never use your engine's own connector, plugin or app-install tools for that: their cards cannot appear here.";
+
 export function composioSystemPrompt(grants: Record<string, ConnectorToolGrant> | undefined): string {
-  if (grants === undefined) return COMPOSIO_PROMPT;
+  if (grants === undefined) return COMPOSIO_PROMPT + CONNECT_WITH_OMB;
   const services = Object.keys(grants);
   if (services.length === 0) {
-    return " No connected apps are assigned to this bot. If a task needs one, or an app's sign-in has expired, call COMPOSIO_MANAGE_CONNECTIONS to show the user a card that connects it, and ask them to allow that app for this bot in OpenMausBot.";
+    return " No connected apps are assigned to this bot. If a task needs one, or an app's sign-in has expired, call COMPOSIO_MANAGE_CONNECTIONS to show the user a card that connects it, and ask them to allow that app for this bot in OpenMausBot." + CONNECT_WITH_OMB;
   }
   const named = services.map(connectorServiceLabel).join(", ");
-  return ` The user's connected apps assigned to this bot (${named}) are reachable through the composio tools — find the right one with COMPOSIO_SEARCH_TOOLS, read its arguments with COMPOSIO_GET_TOOL_SCHEMAS, then run it with COMPOSIO_MULTI_EXECUTE_TOOL. Only the tools this bot was granted will run; when a needed tool is refused, tell the user and ask them to grant it in OpenMausBot. Reach for the granted services before telling the user you have no access.`;
+  return ` The user's connected apps assigned to this bot (${named}) are reachable through the composio tools — find the right one with COMPOSIO_SEARCH_TOOLS, read its arguments with COMPOSIO_GET_TOOL_SCHEMAS, then run it with COMPOSIO_MULTI_EXECUTE_TOOL. Only the tools this bot was granted will run; when a needed tool is refused, tell the user and ask them to grant it in OpenMausBot. Reach for the granted services before telling the user you have no access.${CONNECT_WITH_OMB}`;
 }
 
 function connectorServiceLabel(slug: string): string {
