@@ -288,7 +288,8 @@ describe("shared sentences", () => {
 
 describe("composioSystemPrompt", () => {
   it("keeps the generic all-tools sentence for legacy bots", () => {
-    expect(composioSystemPrompt(undefined)).toBe(COMPOSIO_PROMPT);
+    expect(composioSystemPrompt(undefined).startsWith(COMPOSIO_PROMPT)).toBe(true);
+    expect(composioSystemPrompt(undefined)).toContain("call COMPOSIO_MANAGE_CONNECTIONS");
   });
 
   it("offers only a connection card when no tools are granted", () => {
