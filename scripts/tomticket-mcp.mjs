@@ -96,6 +96,8 @@ function ticketView(ticket) {
     protocol: ticket.protocol,
     subject: ticket.subject,
     customer: ticket.customer?.name,
+    customerEmail: ticket.customer?.email,
+    customerOrganization: ticket.customer?.organization?.name ?? ticket.customer?.organization,
     attendant: ticket.operator ? { id: ticket.operator.id, name: ticket.operator.name } : null,
     attendantIsConfigured: linkedOperator(ticket) === OPERATOR_ID,
     status: ticket.current_status?.description ?? ticket.status?.description,
@@ -120,7 +122,7 @@ const TOOLS = [
   },
   {
     name: "tomticket_get_ticket",
-    description: "Read one ticket: subject, customer, linked attendant (and whether it is the configured one), status, the opening message and every reply marked from \"atendente\" or \"cliente\". Read it before answering so you do not repeat a question.",
+    description: "Read one ticket: subject, customer (name, email and organization when the account has them), linked attendant (and whether it is the configured one), status, the opening message and every reply marked from \"atendente\" or \"cliente\". Read it before answering so you do not repeat a question.",
     inputSchema: { type: "object", additionalProperties: false, properties: { ticket_id: { type: "string" } }, required: ["ticket_id"] },
   },
   {
