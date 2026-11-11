@@ -73,7 +73,7 @@ it("lists the offer tools and none that reach settings", async () => {
   expect(await toolNames()).toEqual([
     "ofertas_criar", "ofertas_ver", "ofertas_recentes", "ofertas_postar", "ofertas_whatsapp",
     "ofertas_descartar", "ofertas_editar", "ofertas_cupom", "ofertas_pra_fila", "ofertas_kit",
-    "ofertas_marketeiro", "ofertas_mensagem_grupo", "ofertas_agendar_janela", "ofertas_situacao",
+    "ofertas_marketeiro", "ofertas_avisar_story", "ofertas_mensagem_grupo", "ofertas_agendar_janela", "ofertas_situacao",
     "ofertas_buscar_shopee", "ofertas_funil",
   ]);
 });
