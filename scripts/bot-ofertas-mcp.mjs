@@ -163,6 +163,13 @@ const TOOLS = [
     run: (args) => call("POST", `/ofertas/${offerId(args)}/marketeiro`),
   },
   {
+    name: "ofertas_avisar_story",
+    readOnly: false,
+    description: "Use no lugar de publicar o story pela API do Instagram: o bot manda o story pronto e o link de afiliado no Telegram do dono, que publica pelo app com o adesivo de link (a API não põe link no story). A oferta precisa já estar na pasta do Marketeiro.",
+    inputSchema: { type: "object", additionalProperties: false, properties: { id: { type: "integer" } }, required: ["id"] },
+    run: (args) => call("POST", `/ofertas/${offerId(args)}/story`),
+  },
+  {
     name: "ofertas_mensagem_grupo",
     readOnly: false,
     description: "Manda no grupo do bot o resumo da janela ou um aviso seu (ex.: \"⚠️ Samu parado: ...\"). O bot põe o seu nome na frente. Até 40 por dia.",

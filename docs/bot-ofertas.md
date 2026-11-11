@@ -29,6 +29,8 @@ Tools:
 - `ofertas_descartar`
 - `ofertas_editar`, `ofertas_cupom`, `ofertas_pra_fila`, `ofertas_kit` and `ofertas_marketeiro`: the same as the
   ✏️ Editar, cupom, 🕒 Pra fila, 🎁 Kit and 📣 Marketeiro buttons
+- `ofertas_avisar_story`: instead of publishing a story through the Instagram API, the bot sends the story and the
+  affiliate link to the owner on Telegram, who publishes it in the app with the link sticker
 - `ofertas_mensagem_grupo`: the window summary or an alert in the group, always signed with the agent's name
 - `ofertas_agendar_janela`
 - `ofertas_situacao`
